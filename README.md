@@ -37,6 +37,9 @@ machine and real KVM VMs (Ubuntu 24.04, kernel 6.8, Docker Engine 29.9.0) as ser
 | `img release` from a Linux build host: amd64 + arm64 (arm64 with no emulation), SBOM + provenance, push by digest, Grype gate, cosign sign + verify | VERIFIED | `q3c-release.log` |
 | `img deploy` → server verifies signature, pulls amd64 by digest, **runs natively** on classic-store and containerd-store servers | VERIFIED | `q3d-deploy-native.log` |
 | Unsigned image, wrong key, deploy by tag: all refused | VERIFIED | `q3e-negative.log` |
+| Grype gate: an image built with an outdated Go toolchain (26 High/Critical stdlib findings) fails the gate (exit 2) and `release` stops before signing; a failed build stops `release` | VERIFIED (after fix F12) | `q4a-grype-gate.log` |
+| `img ship-ssh` (`docker save --platform` \| zstd \| ssh `docker load`) onto a classic-store server: correct arch, runs | VERIFIED | `q5b-ship-ssh.log` |
+| Full release + deploy against Distribution 3.1.2 | VERIFIED | `q3f-distribution-release.log` |
 | Save/load matrix on real Engine 29.9 (classic vs containerd store) | VERIFIED | `q4-save-load-matrix.log` |
 | Switching an existing engine to `containerd-snapshotter: true` hides all images and containers (VM only) | VERIFIED | `q4b-containerd-switch.log` |
 | P2: server with no internet (registry ports only): `mirror-tools`, keyed cosign verify offline, deploy by digest | VERIFIED | `q5-p2-offline.log` |
@@ -44,12 +47,14 @@ machine and real KVM VMs (Ubuntu 24.04, kernel 6.8, Docker Engine 29.9.0) as ser
 | Remote BuildKit over SSH; `docker --context` build + run on the server | VERIFIED | `q8-remote-builder-context.log` |
 | Build times: native amd64 vs cross-compiled arm64 vs QEMU-emulated arm64 | VERIFIED (measured) | `q7-bench-build-times.log` |
 | Forgejo OCI registry smoke test (registry choice) | VERIFIED (smoke) | `q10-forgejo-smoke.log` |
-| README-only run of a fresh clone: new app built, signed, shipped, run | VERIFIED at the commit named in `evidence/README-RUN.md` | `final-readme-run.log` |
+| README-only run of a fresh clone: new app built, signed, shipped, run | VERIFIED at commit `85dde3a` (see `evidence/README-RUN.md`) | `final-readme-run.log` |
 | Multi-node builder with a **genuine arm64** node | **NOT RUN** (no arm64 hardware; needs a Mac or arm64 box) | — |
 | Mac (Docker Desktop) as the build machine, keychain CA install, Rosetta timings | **NOT RUN** here (this repo's Linux round). An earlier Mac round verified the flows against a simulated server | — |
 | A real company server / company registry / company PKI or KMS signing | **NOT RUN** (no access) | — |
 | Harbor | **NOT RUN** | — |
 | `install-trust.sh` on RHEL-family servers (`update-ca-trust` branch) | **NOT RUN** (only Ubuntu VMs) | — |
+
+Kit fixes found on real Linux hosts (F1–F12) are listed in `evidence/README-RUN.md`.
 
 ## Try it on one Linux box (the lab)
 

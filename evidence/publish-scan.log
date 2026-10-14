@@ -1,0 +1,8 @@
+# pre-push scan of the public tree 2026-10-14T20:01:45+05:00, commit 85dde3ac72b4507ceef1d84a04d22934712a0ec4
+grep for host name / user name / tailnet name / private non-lab IPs / private keys / tokens: no hits outside documentation words (see agent run)
+secret-value scan (every generated password + cosign password, literal match): no hits
+3:01PM INF 1 commits scanned.
+3:01PM INF scanned ~255178 bytes (255.18 KB) in 48.3ms
+3:01PM INF no leaks found
+3:01PM INF scanned ~255140 bytes (255.14 KB) in 21.2ms
+3:01PM INF no leaks found

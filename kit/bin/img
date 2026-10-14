@@ -228,9 +228,12 @@ cmd_build() {
     local)    cache=(--cache-from "type=local,src=$PROFILE_DIR/cache/$name" --cache-to "type=local,dest=$PROFILE_DIR/cache/$name,mode=max") ;;
   esac
   log "build $ref for $plats (builder $BUILDER_NAME, transport $TRANSPORT${SOURCE_DATE_EPOCH:+, SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH})"
+  # explicit checks: cmd_build runs inside $(...) from release, where `set -e` is not inherited (bash 3.2 has no
+  # inherit_errexit) — without them a failed build printed "<ref>@" and release went on to scan an empty digest
   docker buildx build --builder "$BUILDER_NAME" --platform "$plats" --provenance="$PROVENANCE" --sbom="$SBOM" \
-    ${cache[@]+"${cache[@]}"} "${out[@]}" --metadata-file "$md" "$@" "$ctx" >&2
+    ${cache[@]+"${cache[@]}"} "${out[@]}" --metadata-file "$md" "$@" "$ctx" >&2 || die "build failed: $ref"
   local digest; digest="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("containerimage.digest",""))' "$md")"
+  [ -n "$digest" ] || [ "$TRANSPORT" = ssh-load ] || die "build produced no digest for $ref"
   mkdir -p "$PROFILE_DIR/last"
   case "$TRANSPORT" in
     registry)    echo "$ref@$digest" | tee "$PROFILE_DIR/last/$name.ref" ;;
@@ -273,8 +276,9 @@ cmd_verify() {
 }
 
 cmd_release() {
-  local ref; ref="$(cmd_build "$@" | tail -n1)"
   [ "$TRANSPORT" = registry ] || die "release is for TRANSPORT=registry (use build + scan + bundle for $TRANSPORT)"
+  local ref; ref="$(cmd_build "$@" | tail -n1)" || die "release stopped: build failed"
+  case "$ref" in *@sha256:?*) ;; *) die "release stopped: build returned no digest ($ref)";; esac
   cmd_scan "$ref"
   [ "$SIGNING" = cosign-key ] && { cmd_sign "$ref"; cmd_verify "$ref"; }
   echo "$ref"

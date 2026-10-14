@@ -1,0 +1,410 @@
+# README-only run: fresh clone of https://github.com/Ahmadkashif/docker-image-sharing-poc at 85dde3ac72b4507ceef1d84a04d22934712a0ec4, 2026-10-14T20:02:14+05:00
+# commands = the first sh block of README.md section 'Try it on one Linux box (the lab)', executed verbatim with set -x
++ $ lab/lab.sh up
+lab: downloading the Ubuntu 24.04 cloud image (~600 MB)
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+srv-classic up: 10.77.0.11 (ssh port 22011 on the container), store=classic
+srv-cstore up: 10.77.0.12 (ssh port 22012 on the container), store=containerd
+srv-offline up: 10.77.0.13 (ssh port 22013 on the container), store=containerd
+lab: waiting for Docker Engine in srv-classic ..................... Engine 29.9.0 overlay2 
+lab: waiting for Docker Engine in srv-cstore  Engine 29.9.0 overlayfs 
+lab: waiting for Docker Engine in srv-offline ........ Engine 29.9.0 overlayfs 
+lab: up. Next:  source <tmp>
++ $ source lab/.host/env
+++ $ export PATH=<tmp>
+++ $ PATH=<tmp>
+++ $ export DOCKER_CONFIG=<tmp>
+++ $ DOCKER_CONFIG=<tmp>
+++ $ unset DOCKER_HOST DOCKER_CONTEXT
++ $ cd kit
++ $ P=verify-linux-vm-lab
++ $ bin/render.py verify-linux-vm-lab
+rendered verify-linux-vm-lab      -> build/verify-linux-vm-lab
++ $ registry/mkcerts.sh build/verify-linux-vm-lab/certs zot.vmlab mirror.vmlab
+created CA: build/verify-linux-vm-lab/certs/ca.crt (name-constrained to: zot.vmlab mirror.vmlab)
+tls/registry.crt: OK
+leaf SANs: DNS:zot.vmlab,DNS:mirror.vmlab
++ $ mkdir -p build/verify-linux-vm-lab/secrets
++ $ chmod 700 build/verify-linux-vm-lab/secrets
++ $ for u in ci-push server-pull <redacted>
+++ $ openssl rand -hex 16
++ $ pw=<redacted>
++ $ echo 'ci-push <redacted>'
++ $ registry/add-user.sh build/verify-linux-vm-lab/auth ci-push <redacted>
+htpasswd: ci-push set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
++ $ for u in ci-push server-pull <redacted>
+++ $ openssl rand -hex 16
++ $ pw=<redacted>
++ $ echo 'server-pull <redacted>'
++ $ registry/add-user.sh build/verify-linux-vm-lab/auth server-pull <redacted>
+htpasswd: server-pull set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
++ $ for u in ci-push server-pull <redacted>
+++ $ openssl rand -hex 16
++ $ pw=<redacted>
++ $ echo '<redacted> <redacted>'
++ $ registry/add-user.sh build/verify-linux-vm-lab/auth <redacted> <redacted>
+htpasswd: <redacted> set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
++ $ docker compose --env-file build/verify-linux-vm-lab/registry/.env -f registry/compose.yaml up -d
+ Container img-registry-verify-linux-vm-lab-zot-1 Creating 
+ Container img-registry-verify-linux-vm-lab-mirror-1 Creating 
+ Container img-registry-verify-linux-vm-lab-zot-1 Created 
+ Container img-registry-verify-linux-vm-lab-mirror-1 Created 
+ Container img-registry-verify-linux-vm-lab-zot-1 Starting 
+ Container img-registry-verify-linux-vm-lab-mirror-1 Starting 
+ Container img-registry-verify-linux-vm-lab-zot-1 Started 
+ Container img-registry-verify-linux-vm-lab-mirror-1 Started 
++ $ ../lab/lab.sh trust verify-linux-vm-lab
+== srv-classic: sudo sh install-trust.sh ca.crt   (rendered for verify-linux-vm-lab)
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+== srv-cstore: sudo sh install-trust.sh ca.crt   (rendered for verify-linux-vm-lab)
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+== srv-offline: sudo sh install-trust.sh ca.crt   (rendered for verify-linux-vm-lab)
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
++ $ ../lab/lab.sh daemon-json verify-linux-vm-lab srv-cstore
+store=overlayfs mirrors=["https://mirror.vmlab:5444/"]
++ $ ../lab/lab.sh login verify-linux-vm-lab server-pull srv-cstore
+Login Succeeded
++ $ awk '$1=="ci-push"{print $2}' build/verify-linux-vm-lab/secrets/registry-passwords
++ $ bin/img -p verify-linux-vm-lab login ci-push
+Login Succeeded
+img: stored credentials for zot.vmlab:5443 (<tmp> — no dockerd involved
+++ $ openssl rand -hex 24
++ $ export COSIGN_PASSWORD=<redacted>
++ $ COSIGN_PASSWORD=<redacted>
++ $ echo <redacted>
++ $ bin/img -p verify-linux-vm-lab keygen
+Private key written to cosign.key
+Public key written to cosign.pub
+==> cosign keys: <tmp> (secret) <tmp> (distribute)
++ $ bin/img -p verify-linux-vm-lab doctor
+==> this machine
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=zot.vmlab:5443:000
+
+  WARN  no arm64 emulation here: linux/arm64 builds only work if the Dockerfile's TARGET stage has no RUN (cross-compile + COPY onto distroless/scratch); else use BUILDER_MODE=multinode with an arm64 node
+
+  FAIL  registry zot.vmlab:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+==> server deploy@srv-cstore
+role=server arch=amd64 docker=29.9.0(amd64, containerd-store=yes) buildx=0.38.0 registry=zot.vmlab:5443:401
+
+  WARN  rootful docker: members of the docker group are root-equivalent
+RESULT=OK
++ $ bin/img -p verify-linux-vm-lab release ../app/pingboard pingboard 2.0.0 -- --build-arg VERSION=2.0.0
+#1 [internal] booting buildkit
+#1 pulling image moby/buildkit:v0.33.1
+#1 pulling image moby/buildkit:v0.33.1 1.6s done
+#1 creating container buildx_buildkit_img-vmlab-builder0
+#1 creating container buildx_buildkit_img-vmlab-builder0 0.4s done
+#1 DONE 2.0s
+==> build zot.vmlab:5443/team/pingboard:2.0.0 for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry, SOURCE_DATE_EPOCH=1791990083)
+#0 building with "img-vmlab-builder" instance using docker-container driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.08kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.2s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e done
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 14.28MB / 14.28MB 0.0s done
+#3 extracting sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 0.1s done
+#3 DONE 0.1s
+
+#4 resolve image config for docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#4 DONE 0.7s
+
+#5 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 ...
+
+#6 [linux/amd64 internal] load metadata for docker.io/library/golang:1.27.2-alpine
+#6 DONE 0.7s
+
+#7 [linux/arm64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#7 DONE 2.7s
+
+#5 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 ...
+
+#8 [internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#5 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 DONE 4.2s
+
+#9 [internal] load build context
+#9 DONE 0.0s
+
+#10 [auth] sharing credentials for zot.vmlab:5443
+#10 DONE 0.0s
+
+#11 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 done
+#11 DONE 0.0s
+
+#12 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#12 resolve docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d done
+#12 DONE 0.0s
+
+#13 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#13 resolve docker.io/docker/buildkit-syft-scanner:stable-1
+#13 resolve docker.io/docker/buildkit-syft-scanner:stable-1 0.7s done
+#13 DONE 0.7s
+
+#14 importing cache manifest from zot.vmlab:5443/team/pingboard:buildcache
+#14 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#14 DONE 0.9s
+
+#15 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#15 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 0.0s done
+#15 DONE 0.0s
+
+#9 [internal] load build context
+#9 transferring context: 2.01kB done
+#9 DONE 0.0s
+
+#12 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#12 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 0.0s done
+#12 sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 126B / 126B 0.0s done
+#12 sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 247.53kB / 247.53kB done
+#12 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 3.85MB / 3.85MB 0.0s done
+#12 extracting sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 0.1s done
+#12 extracting sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 0.0s done
+#12 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 42.99MB / 71.15MB 0.2s
+#12 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 71.15MB / 71.15MB 0.3s done
+#12 extracting sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2
+#12 ...
+
+#13 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#13 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 49.55MB / 49.55MB 0.2s done
+#13 extracting sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 0.3s done
+#13 DONE 1.3s
+
+#12 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#12 extracting sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 1.7s done
+#12 DONE 2.1s
+
+#12 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#12 extracting sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 done
+#12 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.0s done
+#12 DONE 2.1s
+
+#16 [linux/amd64->arm64 build 2/5] WORKDIR /src
+#16 DONE 0.2s
+
+#17 [linux/amd64->arm64 build 3/5] COPY go.mod ./
+#17 DONE 0.0s
+
+#18 [linux/amd64->arm64 build 4/5] COPY *.go ./
+#18 DONE 0.0s
+
+#19 [linux/amd64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build -trimpath -ldflags "-s -w -X main.version=2.0.0 -X main.commit=none" -o /out/pingboard .
+#19 DONE 8.7s
+
+#20 [linux/amd64->arm64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=arm64     go build -trimpath -ldflags "-s -w -X main.version=2.0.0 -X main.commit=none" -o /out/pingboard .
+#20 DONE 8.7s
+
+#15 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#15 DONE 0.1s
+
+#11 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 0B / 143.34kB 0.2s
+#11 sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 143.34kB / 143.34kB 1.0s done
+#11 sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 0B / 124.50kB 0.3s
+#11 ...
+
+#15 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#15 sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab 143.34kB / 143.34kB 1.1s done
+#15 sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 311B / 311B 0.4s done
+#15 sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a 351B / 351B 0.8s done
+#15 sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 80B / 80B 0.8s done
+#15 sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 162B / 162B 0.4s done
+#15 sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 123B / 123B 0.4s done
+#15 sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 188B / 188B 0.4s done
+#15 sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a 67B / 67B 0.4s done
+#15 sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 32.09kB / 32.09kB 0.7s done
+#15 sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 254.67kB / 254.67kB 1.6s done
+#15 sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 288.06kB / 288.06kB 1.7s done
+#15 sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 12.68kB / 12.68kB 0.5s done
+#15 sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 124.53kB / 124.53kB 1.5s done
+#15 extracting sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 0.0s done
+#15 extracting sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+#15 extracting sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.0s done
+#15 extracting sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 0.0s done
+#15 DONE 3.4s
+
+#15 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#15 extracting sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#15 extracting sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a done
+#15 extracting sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#15 extracting sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#15 extracting sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 done
+#15 extracting sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+#15 extracting sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+#15 extracting sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+#15 extracting sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab done
+#15 DONE 3.5s
+
+#21 [linux/amd64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#21 DONE 0.0s
+
+#22 [linux/amd64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#22 0.055 time="2026-10-14T15:08:08Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#22 ...
+
+#11 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 124.50kB / 124.50kB 0.9s done
+#11 extracting sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 0.0s done
+#11 extracting sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+#11 extracting sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.0s done
+#11 extracting sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 0.0s done
+#11 extracting sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#11 DONE 3.9s
+
+#11 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 extracting sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a done
+#11 extracting sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#11 extracting sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#11 extracting sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 done
+#11 extracting sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+#11 extracting sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+#11 extracting sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+#11 extracting sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 done
+#11 DONE 3.9s
+
+#23 [linux/arm64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#23 DONE 0.0s
+
+#24 [linux/arm64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#24 0.059 time="2026-10-14T15:08:09Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#24 ...
+
+#22 [linux/amd64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#22 DONE 1.1s
+
+#24 [linux/arm64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#24 DONE 1.3s
+
+#25 exporting to image
+#25 exporting layers
+#25 exporting layers 0.4s done
+#25 rewriting layers with source-date-epoch 1791990083 (2026-10-14 15:01:23 +0000 UTC)
+#25 rewriting layers with source-date-epoch 1791990083 (2026-10-14 15:01:23 +0000 UTC) 1.1s done
+#25 exporting manifest sha256:e32adbc850559dd3e030ccf0b817f2042ca6f738d5ba3cbbea1aa0368fec34f5 done
+#25 exporting config sha256:c6c67ee1a18ce5de87d812f137b2e874e4976c2d463963f6cb0ce9983c2ac9c7 done
+#25 exporting attestation manifest sha256:42995c496756933b420dd550f84cf906fa0cf0634b28b7e2d70cfc599030885e done
+#25 rewriting layers with source-date-epoch 1791990083 (2026-10-14 15:01:23 +0000 UTC) 0.8s done
+#25 exporting manifest sha256:1d5dafe2f1f08308d11b585dd4b9fd2ae600c980371115b2d3d0cdc3c577b870 0.0s done
+#25 exporting config sha256:d3ebb5e632c28b7e143d4ad1c0b783d232e64bfd46e86025a7b47266a4c0af79 done
+#25 exporting attestation manifest sha256:e09a19728f575c10d8e288a3324c4a43be890c056aa5fcfec831c094579fdbc7
+#25 exporting attestation manifest sha256:e09a19728f575c10d8e288a3324c4a43be890c056aa5fcfec831c094579fdbc7 done
+#25 exporting manifest list sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a done
+#25 pushing layers
+#25 pushing layers 1.9s done
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+#25 ...
+
+#26 exporting cache to registry
+#26 preparing build cache for export 0.6s done
+#26 sending cache export
+#26 writing layer sha256:0f3a6dd016fdb7df45ef809ac9261dc7faeb4cfb3ca4fb4739126c642979b9df 0.8s done
+#26 writing layer sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.2s done
+#26 writing layer sha256:0ae5e689a10f81cd954b96dabfee4e3392233097519e245680345de8f16de5b2 0.8s done
+#26 writing layer sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a 0.2s done
+#26 writing layer sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 0.2s done
+#26 writing layer sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#26 writing layer sha256:3a2f64bd27b18f7c8be4510a109b7f2e12f70ffe96f76bbfb5041afde106d97d 0.6s done
+#26 writing layer sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 0.2s done
+#26 writing layer sha256:46c64977b80335cf077b8a92690f341903043b3b98b9a264257fc0dbdc2f1a3b 0.6s done
+#26 writing layer sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.2s done
+#26 writing layer sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 0.0s done
+#26 writing layer sha256:5e2ccb0673e64e3e5c4cbd69b69aa8b20322680eae1812310d0836eab7d0ad83 0.6s done
+#26 writing layer sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 0.2s done
+#26 writing layer sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 0.2s done
+#26 writing layer sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#26 writing layer sha256:91eeb379674c920358f88961a958ad000f6365fdec11f6ac48d2dd36a93caec5 0.5s done
+#26 writing layer sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 0.2s done
+#26 writing layer sha256:b5b244b7fbf9c5961d643a8fe75ceee03b092cf1b3e0be775e0448b413c94592 0.5s done
+#26 writing layer sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a 0.2s done
+#26 writing layer sha256:b9790a0be03a5e5f665c78f20250e54f53aa12a3dd4e5d98e1e23d57e1bdf2a0 0.6s done
+#26 writing layer sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+#26 writing layer sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab 0.2s done
+#26 writing layer sha256:ce1e5e0e133467d0787d687c888990b5b0a178c1cf23ffe01014e69671fcafa4 0.6s done
+#26 writing layer sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#26 writing layer sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 0.2s done
+#26 writing layer sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 0.2s done
+#26 writing layer sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 0.2s done
+#26 writing layer sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 0.0s done
+#26 writing layer sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 0.2s done
+#26 writing config sha256:fad56d5e60aa662102468f5a7536be1db8336bb6cb62ccdd12d41d88323ad7e7
+#26 writing config sha256:fad56d5e60aa662102468f5a7536be1db8336bb6cb62ccdd12d41d88323ad7e7 0.8s done
+#26 ...
+
+#25 exporting to image
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a 2.1s done
+#25 DONE 6.5s
+
+#26 exporting cache to registry
+#26 writing cache image manifest sha256:dbd335379691046b11fa6f4ecc245c7690b23af9c332b9c1b10e985ad09655a5
+#26 sending cache export 4.1s done
+#26 writing cache image manifest sha256:dbd335379691046b11fa6f4ecc245c7690b23af9c332b9c1b10e985ad09655a5 0.7s done
+#26 DONE 4.7s
+
+#27 resolving provenance for metadata file
+#27 DONE 0.0s
+==> scan registry:zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan registry:zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a [linux/arm64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+==> cosign sign (recursive: index + every platform manifest) zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+Flag --tlog-upload has been deprecated, prefer using a --signing-config file with no transparency log services
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+==> cosign verify zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+==> signature OK
+zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+++ $ cat build/verify-linux-vm-lab/last/pingboard.ref
++ $ bin/img -p verify-linux-vm-lab deploy zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a -- --name pingboard -p 8080:8080
+==> deploy zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a -> deploy@srv-cstore (linux/amd64)
+Unable to find image 'ghcr.io/sigstore/cosign/cosign:v3.1.3' locally
+v3.1.3: Pulling from sigstore/cosign/cosign
+Digest: sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+Status: Downloaded newer image for ghcr.io/sigstore/cosign/cosign:v3.1.3
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+server: signature verified for zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+server: pulled linux/amd64 zot.vmlab:5443/team/pingboard:2.0.0@sha256:7a313e606b45c79cd56d9ec4e0cf62ace554e8054fc1d104ac77dd7fcaa3e34a
+ac49bfa2a846d1d16b04a51f7447850568099835758ca843a886c2ca4dcbe9df
++ $ ssh deploy@srv-cstore curl -s localhost:8080/
+{"app":"pingboard","version":"2.0.0","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"ac49bfa2a846","uptime":"0s","hits":1}
+QUICKSTART_RC=0

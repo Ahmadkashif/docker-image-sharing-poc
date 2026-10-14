@@ -1,0 +1,11 @@
+# Row 4a on real Linux: Grype gate on an outdated Go toolchain (same clone/commit as the README run) 2026-10-14T20:09:23+05:00
+$ bin/img -p verify-linux-vm-lab release ../app/pingboard pingboard 2.0.1-oldgo -- --build-arg VERSION=oldgo --build-arg GO_VERSION=1.24.0
+==> build zot.vmlab:5443/team/pingboard:2.0.1-oldgo for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry, SOURCE_DATE_EPOCH=1791990083)
+ERROR: failed to build: failed to solve: process "/bin/sh -c CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH     go build -trimpath -ldflags \"-s -w -X main.version=$VERSION -X main.commit=$COMMIT\" -o /out/pingboard ." did not complete successfully: exit code: 1
+==> scan registry:zot.vmlab:5443/team/pingboard:2.0.1-oldgo@ [linux/amd64] fail-on=high only-fixed=yes
+==> SCAN GATE FAILED for linux/amd64 (exit 1)
+release_rc=1
+signature present on the gated image? (expect none)
+error during command execution: parsing reference: could not parse reference: zot.vmlab:5443/team/pingboard:2.0.1-oldgo@
+# (transcribed from the terminal: the build failed because go.mod says 'go 1.27' and Go 1.24 refuses it, but release
+#  still went on to scan '<ref>@' with an empty digest -> kit bug F12, fixed in bin/img; see q4a-grype-gate.log)

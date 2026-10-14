@@ -1,4 +1,4 @@
-# validate.sh on Linux after fixes F1-F11 (+ key/htpasswd mode checks) 2026-10-14T19:57:49+05:00
+# validate.sh on Linux after fixes F1-F12 (+ key/htpasswd mode checks) 2026-10-14T20:11:31+05:00
 render all profiles
   ok   render --all
   ok   p1-company-registry daemon.json

@@ -1,0 +1,32 @@
+# Row 4a on real Linux (re-run after fix F12) 2026-10-14T20:10:22+05:00
+# (first attempt, q4a-grype-gate.first-attempt.log: Go 1.24 refused go.mod 'go 1.27' -> build FAILED, but release went on to scan '<ref>@' = kit bug F12)
+== (a) failing build must stop release
+$ bin/img -p verify-linux-vm-lab release ../app/pingboard pingboard 2.0.1-oldgo -- --build-arg GO_VERSION=1.24.0
+==> build zot.vmlab:5443/team/pingboard:2.0.1-oldgo for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry, SOURCE_DATE_EPOCH=1791990083)
+ERROR: failed to build: failed to solve: process "/bin/sh -c CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH     go build -trimpath -ldflags \"-s -w -X main.version=$VERSION -X main.commit=$COMMIT\" -o /out/pingboard ." did not complete successfully: exit code: 1
+img: build failed: zot.vmlab:5443/team/pingboard:2.0.1-oldgo
+img: release stopped: build failed
+release_rc=1
+== (b) same app with go.mod 'go 1.24', built with the outdated Go 1.24.0 toolchain
+$ bin/img -p verify-linux-vm-lab release <copy of app with go 1.24> pingboard 2.0.1-oldgo -- --build-arg VERSION=oldgo --build-arg GO_VERSION=1.24.0
+==> build zot.vmlab:5443/team/pingboard:2.0.1-oldgo for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry)
+==> scan registry:zot.vmlab:5443/team/pingboard:2.0.1-oldgo@sha256:7a83e2892cb47a1fe2cbc8d1ce50df5b4d78e3ce0bf4459c9ac040ce8c8f3a77 [linux/amd64] fail-on=high only-fixed=yes
+==> SCAN GATE FAILED for linux/amd64 (exit 2)
+High/Critical findings (first 12):
+stdlib  go1.24.0   *1.24.13, 1.25.7, 1.26.0-rc.3  go-module  GO-2026-4337   Critical  0.9% (59th)  0.9    
+stdlib  go1.24.0   1.23.8, *1.24.2                go-module  GO-2025-3563   Critical  0.8% (56th)  0.7    
+stdlib  go1.24.0   *1.25.8, 1.26.1                go-module  GO-2026-4601   High      0.8% (56th)  0.6    
+stdlib  go1.24.0   *1.25.10, 1.26.3               go-module  GO-2026-4918   High      0.8% (54th)  0.6    
+stdlib  go1.24.0   *1.25.13, 1.26.6, 1.27.0-rc.3  go-module  GO-2026-5026   High      0.7% (51st)  0.5    
+stdlib  go1.24.0   1.26.9                         go-module  GO-2026-6612   Critical  0.6% (45th)  0.5    
+stdlib  go1.24.0   *1.24.8, 1.25.2                go-module  GO-2025-4009   High      0.7% (50th)  0.5    
+stdlib  go1.24.0   *1.25.9, 1.26.2                go-module  GO-2026-4870   High      0.6% (48th)  0.5    
+stdlib  go1.24.0   *1.25.10, 1.26.3               go-module  GO-2026-4971   High      0.6% (48th)  0.5    
+stdlib  go1.24.0   *1.25.9, 1.26.2                go-module  GO-2026-4947   High      0.6% (48th)  0.5    
+stdlib  go1.24.0   *1.25.11, 1.26.4               go-module  GO-2026-5037   High      0.6% (46th)  0.4    
+stdlib  go1.24.0   1.26.9                         go-module  GO-2026-6603   High      0.6% (45th)  0.4    
+count High+Critical: 26
+release_rc=2
+built (unsigned) ref: zot.vmlab:5443/team/pingboard:2.0.1-oldgo@sha256:7a83e2892cb47a1fe2cbc8d1ce50df5b4d78e3ce0bf4459c9ac040ce8c8f3a77
+$ bin/img -p verify-linux-vm-lab verify zot.vmlab:5443/team/pingboard:2.0.1-oldgo@sha256:7a83e2892cb47a1fe2cbc8d1ce50df5b4d78e3ce0bf4459c9ac040ce8c8f3a77   # must fail: release stopped before signing
+error during command execution: no signatures found

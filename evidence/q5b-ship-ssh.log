@@ -1,0 +1,16 @@
+# Row 5 on real Linux: img ship-ssh (TRANSPORT=ssh-load) onto the classic-store server 2026-10-14T20:11:07+05:00
+$ bin/img -p verify-linux-vm-lab --set TRANSPORT=ssh-load --set CACHE=none --set SERVER_SSH=deploy@srv-classic build ../app/pingboard pingboard 2.0.0-ssh
+==> build zot.vmlab:5443/team/pingboard:2.0.0-ssh for linux/amd64 (builder img-vmlab-builder, transport ssh-load, SOURCE_DATE_EPOCH=1791990083)
+pingboard:2.0.0-ssh
+$ bin/img -p verify-linux-vm-lab --set TRANSPORT=ssh-load --set SERVER_SSH=deploy@srv-classic scan docker:pingboard:2.0.0-ssh
+==> scan docker:pingboard:2.0.0-ssh [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+$ bin/img -p verify-linux-vm-lab --set SERVER_SSH=deploy@srv-classic ship-ssh pingboard:2.0.0-ssh
+==> docker save --platform linux/amd64 pingboard:2.0.0-ssh | zstd -q -T0 -3 -c | ssh deploy@srv-classic docker load
+Loaded image: pingboard:2.0.0-ssh
+server store: overlay2
+loaded linux/amd64
+{"app":"pingboard","version":"2.0.0-ssh","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"520e1651bbe8","uptime":"3s","hits":1}
+
+build-host copy removed (docker image rm pingboard:2.0.0-ssh)
