@@ -109,6 +109,8 @@ docker compose --env-file build/$P/registry/.env -f registry/compose.yaml down
 bin/img -p $P builder rm
 ../lab/lab.sh destroy              # VMs, lab container, lab image, lab network, lab/.host (incl. lab logins)
 docker volume rm img-grype-db      # Grype vulnerability DB cache
+rm -rf ../lab/.state               # Ubuntu cloud image cache (~600 MB)
+# tool images pulled on first use (zot, registry, buildkit, oras, regctl, skopeo, httpd, golang, ...): docker image rm
 ```
 
 ## Using it for a real server

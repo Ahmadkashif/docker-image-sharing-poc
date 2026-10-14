@@ -50,4 +50,4 @@ echo "  tags after signing: $(regctl r tag ls $REG/lab-admin/pingboard 2>&1 | tr
 echo "== 4. read-only credential: push with the read:package token must be refused"
 out=$(regctl r image copy "$SRC" $REG/lab-admin/robot-test:1 2>&1); rc=$?; echo "$out" | tail -1; echo "  push_with_read_token rc=$rc"
 rm -rf "$T"
-docker rm -f img-forgejo-smoke >/dev/null 2>&1; echo "smoke container removed"
+docker rm -f -v img-forgejo-smoke >/dev/null 2>&1; echo "smoke container + its anonymous /data volume removed"

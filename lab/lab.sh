@@ -49,7 +49,7 @@ cmd_up() {
   local img="$LAB/.state/cache/noble-server-cloudimg-amd64.img"
   if [ ! -f "$img" ]; then
     echo "lab: downloading the Ubuntu 24.04 cloud image (~600 MB)"
-    curl -fSL -o "$img.part" https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+    curl -fsSL -o "$img.part" https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
     sum="$(curl -fsSL https://cloud-images.ubuntu.com/noble/current/SHA256SUMS | awk '/noble-server-cloudimg-amd64.img$/{print $1}')"
     echo "$sum  $img.part" | sha256sum -c - >/dev/null || die "cloud image checksum mismatch"; mv "$img.part" "$img"
   fi
@@ -80,7 +80,7 @@ cmd_net() { docker exec "$C" vmlab net "$@"; }
 cmd_ls() { docker exec "$C" vmlab ls; }
 cmd_down() { for v in $VMS; do IFS=: read -r n _ <<<"$v"; docker exec "$C" vmlab down "$n" 2>/dev/null || true; done; sleep 20; docker compose -f "$LAB/compose.yaml" stop; }
 cmd_destroy() {
-  docker exec "$C" sh -c 'for d in /state/vms/*/; do n=$(basename "$d"); vmlab rm "$n"; done; rm -rf /state/vms /state/media /state/lab_ed25519*' 2>/dev/null || true
+  docker exec "$C" sh -c 'for d in /state/vms/*/; do n=$(basename "$d"); vmlab rm "$n"; done; rm -rf /state/vms /state/media /state/lab_ed25519* /state/dnsmasq.log /state/regnet' 2>/dev/null || true
   docker compose -f "$LAB/compose.yaml" down --rmi all 2>/dev/null || true
   docker network rm "$NETNAME" >/dev/null 2>&1 || true; rm -rf "$H"; echo "lab: destroyed (cloud image cache kept in $LAB/.state/cache)"; }
 
