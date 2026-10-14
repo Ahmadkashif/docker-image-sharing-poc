@@ -1,0 +1,9 @@
+# Benchmark variant: the compile stage runs on the TARGET platform (QEMU for amd64 on an arm64 host).
+ARG GO_VERSION=1.27.1
+FROM golang:${GO_VERSION}-alpine AS build
+WORKDIR /src
+COPY go.mod *.go ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/app .
+FROM alpine:3.24
+RUN adduser -D -H -u 10001 app
+COPY --from=build /out/app /usr/local/bin/app

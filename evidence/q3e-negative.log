@@ -1,0 +1,17 @@
+# Q3 negative checks on the real server VM 2026-10-14T19:05:36+05:00
+== unsigned image: img build (push, no sign) then deploy
+unsigned ref: zot.vmlab:5443/team/pingboard:1.0.1-unsigned@sha256:be4307b3dae968b224154a474add1deaddcf7562219d354cf8dd2fb60d5605eb
+==> deploy zot.vmlab:5443/team/pingboard:1.0.1-unsigned@sha256:be4307b3dae968b224154a474add1deaddcf7562219d354cf8dd2fb60d5605eb -> deploy@srv-cstore (linux/amd64)
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+Error: no signatures found
+error during command execution: no signatures found
+deploy_unsigned_rc=10
+== wrong key: a second cosign key pair the image was NOT signed with
+==> deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> deploy@srv-cstore (linux/amd64)
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+Error: no matching attestations: failed to verify signature: could not verify envelope: accepted signatures do not match threshold, Found: 0, Expected 1
+error during command execution: no matching attestations: failed to verify signature: could not verify envelope: accepted signatures do not match threshold, Found: 0, Expected 1
+deploy_wrongkey_rc=1
+== tag instead of digest
+img: deploy by digest (ref@sha256:...), got zot.vmlab:5443/team/pingboard:1.0.1
+deploy_tag_rc=1

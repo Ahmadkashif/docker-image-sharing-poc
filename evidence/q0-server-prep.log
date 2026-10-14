@@ -1,0 +1,78 @@
+# server prep inside the VMs only (never on the live host): rendered install-trust.sh (+ daemon.json on srv-cstore) 2026-10-14T18:53:44+05:00
+== srv-classic
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+rehash: warning: skipping ca-certificates.crt,it does not contain exactly one certificate or CRL
+OS trust store updated
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab-dist
+docker trusts dist.vmlab:5443
+OS trust store updated
+== srv-cstore
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+rehash: warning: skipping ca-certificates.crt,it does not contain exactly one certificate or CRL
+OS trust store updated
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab-dist
+docker trusts dist.vmlab:5443
+OS trust store updated
+== srv-offline
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+rehash: warning: skipping ca-certificates.crt,it does not contain exactly one certificate or CRL
+OS trust store updated
+$ sudo sh install-trust.sh ca.crt   # rendered for verify-linux-vm-lab-dist
+docker trusts dist.vmlab:5443
+OS trust store updated
+== srv-cstore: merge rendered daemon.json (containerd store + Docker Hub mirror) and restart dockerd (VM)
+{
+  "features": {
+    "containerd-snapshotter": true
+  },
+  "live-restore": true,
+  "log-driver": "local",
+  "log-opts": {
+    "max-size": "20m",
+    "max-file": "5"
+  },
+  "registry-mirrors": [
+    "https://mirror.vmlab:5444"
+  ]
+}
+store=[["driver-type","io.containerd.snapshotter.v1"]] mirrors=["https://mirror.vmlab:5444/"]
+# re-run after fix F3 (OS-store file per profile; the first run overwrote zot's CA with dist's in /usr/local/share/ca-certificates/img-registry-ca.crt)
+== srv-classic
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+docker trusts dist.vmlab:5443
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+img-registry-verify-linux-vm-lab-dist.crt
+img-registry-verify-linux-vm-lab.crt
+zot /v2/ 401
+dist /v2/ 401
+mirror /v2/ 200
+== srv-cstore
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+docker trusts dist.vmlab:5443
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+img-registry-verify-linux-vm-lab-dist.crt
+img-registry-verify-linux-vm-lab.crt
+zot /v2/ 401
+dist /v2/ 401
+mirror /v2/ 200
+== srv-offline
+docker trusts zot.vmlab:5443
+docker trusts mirror.vmlab:5444
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+docker trusts dist.vmlab:5443
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+img-registry-verify-linux-vm-lab-dist.crt
+img-registry-verify-linux-vm-lab.crt
+zot /v2/ 401
+dist /v2/ 401
+mirror /v2/ 200

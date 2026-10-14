@@ -1,0 +1,15 @@
+# teardown of the research-run lab before the README-only run 2026-10-14T20:00:35+05:00
+img-vmlab-builder removed
+img-vmlab-dist-builder removed
+img-vmlab-p3-builder removed
+img-vmlab-remote removed
+img-srv-cstore
+ Container img-vmlab Stopping 
+ Container img-vmlab Stopped 
+ Container img-vmlab Removing 
+ Container img-vmlab Removed 
+img-vmlab
+img-grype-db
+img-registry-verify-linux-vm-lab-dist_registry-data
+img-registry-verify-linux-vm-lab_mirror-data
+img-registry-verify-linux-vm-lab_zot-data

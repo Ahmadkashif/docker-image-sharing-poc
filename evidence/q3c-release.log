@@ -1,0 +1,170 @@
+# Q3 release of the NEW app pingboard (not tidewatch) from the Linux build host, no QEMU/binfmt on it 2026-10-14T19:02:56+05:00
+# after fix F5 (cosign runs as --user $ME). First attempt: q3c-release.first-attempt.log (sign 401: cosign uid 65532 could not read the 0600 authfile)
+binfmt handlers on the build host: python3.12  (no qemu-*)
+$ bin/img -p verify-linux-vm-lab release ../poc-app/pingboard pingboard 1.0.1 -- --build-arg VERSION=1.0.1
+==> build zot.vmlab:5443/team/pingboard:1.0.1 for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry, SOURCE_DATE_EPOCH=1788337528)
+#0 building with "img-vmlab-builder" instance using docker-container driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.08kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 1.4s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e done
+#3 CACHED
+
+#4 resolve image config for docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#4 DONE 0.7s
+
+#5 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 ...
+
+#6 [linux/amd64 internal] load metadata for docker.io/library/golang:1.27.2-alpine
+#6 DONE 0.7s
+
+#7 [linux/arm64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#7 ...
+
+#5 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 DONE 0.9s
+
+#8 [internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#7 [linux/arm64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#7 DONE 1.0s
+
+#9 [internal] load build context
+#9 DONE 0.0s
+
+#10 DONE 0.0s
+
+#11 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 0.0s done
+#11 DONE 0.0s
+
+#12 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#12 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 0.0s done
+#12 DONE 0.0s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 resolve docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d 0.0s done
+#13 DONE 0.0s
+
+#14 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#14 resolve docker.io/docker/buildkit-syft-scanner:stable-1
+#14 resolve docker.io/docker/buildkit-syft-scanner:stable-1 0.7s done
+#14 DONE 0.7s
+
+#15 importing cache manifest from zot.vmlab:5443/team/pingboard:buildcache
+#15 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#15 DONE 1.0s
+
+#9 [internal] load build context
+#9 transferring context: 54B done
+#9 DONE 0.0s
+
+#16 [linux/amd64 build 2/5] WORKDIR /src
+#16 CACHED
+
+#17 [linux/amd64 build 3/5] COPY go.mod ./
+#17 CACHED
+
+#18 [linux/amd64 build 4/5] COPY *.go ./
+#18 CACHED
+
+#19 [linux/amd64->arm64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=arm64     go build -trimpath -ldflags "-s -w -X main.version=1.0.1 -X main.commit=none" -o /out/pingboard .
+#19 DONE 0.4s
+
+#20 [linux/amd64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build -trimpath -ldflags "-s -w -X main.version=1.0.1 -X main.commit=none" -o /out/pingboard .
+#20 DONE 0.4s
+
+#12 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#12 CACHED
+
+#11 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 CACHED
+
+#21 [linux/arm64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#21 DONE 0.0s
+
+#22 [linux/amd64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#22 DONE 0.0s
+
+#14 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#14 CACHED
+
+#23 [linux/arm64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#23 0.055 time="2026-10-14T14:03:01Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#23 ...
+
+#24 [linux/amd64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#24 0.059 time="2026-10-14T14:03:01Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#24 DONE 1.8s
+
+#23 [linux/arm64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#23 DONE 1.8s
+
+#25 exporting to image
+#25 exporting layers
+#25 exporting layers 0.3s done
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC)
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC) 0.9s done
+#25 exporting manifest sha256:1a7f142723c1d35ec14214ca28790f0b3e8cfe6bd6f07209909d750769f7e0a8 done
+#25 exporting config sha256:a2ab6603b966028368b83e939c88dbaf575de5efd1a3f32000ee848894bf7994 done
+#25 exporting attestation manifest sha256:1658c6d978d915f07f04b466c66d1476d4657b536aca5005afeaf8740690b972 done
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC) 0.8s done
+#25 exporting manifest sha256:b759ec691461f6de3c8db0993fd913f634f7a1c9c1dee471d5310a05c0815076 done
+#25 exporting config sha256:3d6b1086df20db071bf9adfdd413057067528ac8b57f5b5009fbf3a930c63754 done
+#25 exporting attestation manifest sha256:df338683b11fbc76dcb49a611cb14c3cb9a64d7eeaf618198f735ca3f99a4e65 done
+#25 exporting manifest list sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf done
+#25 pushing layers
+#25 pushing layers 2.0s done
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf 1.9s done
+#25 DONE 6.0s
+
+#26 exporting cache to registry
+#26 preparing build cache for export 0.7s done
+#26 sending cache export
+#26 writing config sha256:268fa43ee978ccd48f869bb5f6691d856b12a3acbe9f10942f9381397eba24a6
+#26 writing config sha256:268fa43ee978ccd48f869bb5f6691d856b12a3acbe9f10942f9381397eba24a6 0.5s done
+#26 writing cache image manifest sha256:476648e93ad703acb745b33256ab4dd8827a383a6135e166b35972f9053c2572
+#26 sending cache export 3.8s done
+#26 writing cache image manifest sha256:476648e93ad703acb745b33256ab4dd8827a383a6135e166b35972f9053c2572 0.6s done
+#26 DONE 4.6s
+
+#27 resolving provenance for metadata file
+#27 DONE 0.0s
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf [linux/arm64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+==> cosign sign (recursive: index + every platform manifest) zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+Flag --tlog-upload has been deprecated, prefer using a --signing-config file with no transparency log services
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+Signing artifact...
+Pushing signature to: zot.vmlab:5443/team/pingboard
+==> cosign verify zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+==> signature OK
+zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+release_rc=0 wall=45s

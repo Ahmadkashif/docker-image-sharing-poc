@@ -1,0 +1,45 @@
+# Q3 deploy of zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf onto REAL amd64 KVM server VMs (native run) 2026-10-14T19:03:49+05:00
+== srv-classic: server logs in with the read-only robot (its own ~/.docker on the server)
+Login Succeeded
+== $ bin/img -p verify-linux-vm-lab --set SERVER_SSH=deploy@srv-cstore deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -- --name pingboard -p 8080:8080 --restart unless-stopped
+==> deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> deploy@srv-cstore (linux/amd64)
+Unable to find image 'ghcr.io/sigstore/cosign/cosign:v3.1.3' locally
+v3.1.3: Pulling from sigstore/cosign/cosign
+Digest: sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+Status: Downloaded newer image for ghcr.io/sigstore/cosign/cosign:v3.1.3
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+server: signature verified for zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+server: pulled linux/amd64 zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+b00d90e0f9679a5a5eacded911628cbf2220a6a8ce897b2dd251c92d0917ba30
+rc=0
+server: uname -m=x86_64 kernel=6.8.0-142-generic store=overlayfs
+pingboard zot.vmlab:5443/team/pingboard:1.0.1 Up 12 seconds (healthy)
+{"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"b00d90e0f967","uptime":"12s","hits":1}
+sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf linux/amd64
+== $ bin/img -p verify-linux-vm-lab --set SERVER_SSH=deploy@srv-classic deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -- --name pingboard -p 8080:8080 --restart unless-stopped
+==> deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> deploy@srv-classic (linux/amd64)
+Unable to find image 'ghcr.io/sigstore/cosign/cosign:v3.1.3' locally
+v3.1.3: Pulling from sigstore/cosign/cosign
+Digest: sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+Status: Downloaded newer image for ghcr.io/sigstore/cosign/cosign:v3.1.3
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+server: signature verified for zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+server: pulled linux/amd64 zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+3bf3a33b360e7c6318c21343192a734d60945fc51900452deb1929deb8f92dd4
+rc=0
+server: uname -m=x86_64 kernel=6.8.0-142-generic store=overlay2
+pingboard zot.vmlab:5443/team/pingboard:1.0.1 Up 12 seconds (healthy)
+{"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"3bf3a33b360e","uptime":"12s","hits":1}
+sha256:a2ab6603b966028368b83e939c88dbaf575de5efd1a3f32000ee848894bf7994 linux/amd64

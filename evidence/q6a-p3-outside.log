@@ -1,0 +1,48 @@
+# Q6 P3 OUTSIDE leg on the Linux build host (TRANSPORT=oci-archive; the inside CA does not exist out here) 2026-10-14T19:20:47+05:00
+# fixes F6 (CA only required by registry-touching commands) + F7 (builder drops CA entries whose file is absent)
+$ bin/img -p verify-linux-vm-lab-p3 build ../poc-app/pingboard pingboard 1.0.2
+ERROR: (*service).Write failed: rpc error: code = Unavailable desc = ref layer-sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 locked for 1.689094ms (since 2026-10-14 19:21:40.882035146 +0500 PKT m=+51.476218418): unavailable
+ERROR: (*service).Write failed: rpc error: code = Unavailable desc = ref layer-sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 locked for 3.133896ms (since 2026-10-14 19:21:40.889523491 +0500 PKT m=+51.483706761): unavailable
+ERROR: (*service).Write failed: rpc error: code = Unavailable desc = ref layer-sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 locked for 457.219µs (since 2026-10-14 19:21:40.894491754 +0500 PKT m=+51.488675024): unavailable
+dist/pingboard-1.0.2.oci.tar sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e
+$ bin/img -p verify-linux-vm-lab-p3 scan oci-archive:dist/pingboard-1.0.2.oci.tar
+==> REGISTRY_CA_FILE <repo>/kit/build/verify-linux-vm-lab-p3/certs/ca.crt not present here: fine for 'scan' with TRANSPORT=oci-archive (no registry involved)
+==> scan oci-archive:dist/pingboard-1.0.2.oci.tar [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan oci-archive:dist/pingboard-1.0.2.oci.tar [linux/arm64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+scan_rc=0
+$ bin/img -p verify-linux-vm-lab-p3 bundle dist/pingboard-1.0.2.oci.tar
+==> REGISTRY_CA_FILE <repo>/kit/build/verify-linux-vm-lab-p3/certs/ca.crt not present here: fine for 'bundle' with TRANSPORT=oci-archive (no registry involved)
+==> cosign sign-blob dist/pingboard-1.0.2.oci.tar (bundle: dist/pingboard-1.0.2.oci.tar.sigstore.json)
+Flag --tlog-upload has been deprecated, prefer using a --signing-config file with no transparency log services
+Using payload from: dist/pingboard-1.0.2.oci.tar
+Signing artifact...
+Wrote bundle to file dist/pingboard-1.0.2.oci.tar.sigstore.json
+==> carry: dist/pingboard-1.0.2.oci.tar  dist/pingboard-1.0.2.oci.tar.sha256  dist/pingboard-1.0.2.oci.tar.sigstore.json  (+ cosign.pub once, via a separate trusted channel)
+$ bin/img -p verify-linux-vm-lab-p3 bundle-tools dist/tools.tar.zst
+==> REGISTRY_CA_FILE <repo>/kit/build/verify-linux-vm-lab-p3/certs/ca.crt not present here: fine for 'bundle-tools' with TRANSPORT=oci-archive (no registry involved)
+==> docker save --platform linux/amd64 ghcr.io/sigstore/cosign/cosign:v3.1.3 anchore/grype:v0.119.0 quay.io/skopeo/stable:v1.22.3 ghcr.io/regclient/regctl:v0.11.6 ghcr.io/project-zot/zot:v2.1.21 > dist/tools.tar.zst
+==> inside: docker load -i tools.tar.zst   (docker load reads zstd directly)
+$ bin/img -p verify-linux-vm-lab export zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf dist/pingboard-1.0.1.signed.tar
+==> regctl image copy --referrers --digest-tags --force-recursive zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> OCI layout (dist/pingboard-1.0.1.signed.tar)
+ocidir:///layout/export:1.0.1
+==> wrote dist/pingboard-1.0.1.signed.tar (8.0M) — index, attestations and signature referrers
+   281148
+  8335360 pingboard-1.0.1.oci.tar
+  8355840 pingboard-1.0.1.signed.tar
+  93 pingboard-1.0.1.signed.tar.sha256
+  8326144 pingboard-1.0.2.oci.tar
+  90 pingboard-1.0.2.oci.tar.sha256
+  383 pingboard-1.0.2.oci.tar.sigstore.json
+  262859044 tools.tar.zst
+  80 tools.tar.zst.sha256
+c0f8ffecf0596c9c78055c02d9218f8099738b726e13ccbbc79ebff1d0fa0a26  pingboard-1.0.1.signed.tar
+2aef9eca090552507482e5873714a64199ed5296f292ea4a5cb724f5111cf5b6  pingboard-1.0.2.oci.tar
+848884b261b16ecbf0c6c2e7a6e42e1080784225b739a10263d0dc6cbe27255d  tools.tar.zst
+# Q6 re-cut of the tools bundle after fix F9 (inside add-user.sh had no htpasswd: httpd image was not bundled) 2026-10-14T19:24:57+05:00
+$ bin/img -p verify-linux-vm-lab-p3 bundle-tools dist/tools.tar.zst
+==> docker save --platform linux/amd64 ghcr.io/sigstore/cosign/cosign:v3.1.3 anchore/grype:v0.119.0 quay.io/skopeo/stable:v1.22.3 ghcr.io/regclient/regctl:v0.11.6 ghcr.io/project-zot/zot:v2.1.21 httpd:2.4-alpine > dist/tools.tar.zst
+==> inside: docker load -i tools.tar.zst   (docker load reads zstd directly)
+  286181767 dist/tools.tar.zst

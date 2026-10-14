@@ -1,0 +1,31 @@
+# Q3 setup: doctor + keygen + builder on the Linux build host 2026-10-14T18:56:59+05:00
+$ bin/img -p verify-linux-vm-lab doctor
+==> this machine
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=zot.vmlab:5443:000
+
+  FAIL  registry zot.vmlab:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+==> server deploy@srv-cstore
+role=server arch=amd64 docker=29.9.0(amd64, containerd-store=yes) buildx=0.38.0 registry=zot.vmlab:5443:401
+
+  WARN  rootful docker: members of the docker group are root-equivalent
+RESULT=OK
+$ COSIGN_PASSWORD=<redacted> bin/img -p verify-linux-vm-lab keygen
+Private key written to cosign.key
+Public key written to cosign.pub
+==> cosign keys: <repo>/kit/build/verify-linux-vm-lab/keys/cosign.key (secret) <repo>/kit/build/verify-linux-vm-lab/keys/cosign.pub (distribute)
+total 8
+-rw------- cosign.key
+-rw-r--r-- cosign.pub
+$ bin/img -p verify-linux-vm-lab builder
+#1 [internal] booting buildkit
+#1 pulling image moby/buildkit:v0.33.1
+#1 pulling image moby/buildkit:v0.33.1 30.3s done
+#1 creating container buildx_buildkit_img-vmlab-builder0
+#1 creating container buildx_buildkit_img-vmlab-builder0 0.4s done
+#1 DONE 30.6s
+Name:          img-vmlab-builder
+Driver:        docker-container
+Name:                  img-vmlab-builder0
+Endpoint:              unix:///var/run/docker.sock
+Platforms:             linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/386

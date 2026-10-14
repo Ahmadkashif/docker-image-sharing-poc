@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# PATTERN (not an app): build for any target platform WITHOUT emulating the compiler.
+# The toolchain stage is pinned to the BUILD platform (native arm64 on Apple Silicon, native amd64 on a CI box);
+# only the small runtime stage is assembled for the TARGET platform. With buildx:
+#   docker buildx build --platform linux/amd64,linux/arm64 ...
+# BuildKit sets BUILDPLATFORM / TARGETPLATFORM / TARGETOS / TARGETARCH / TARGETVARIANT automatically.
+#
+# Language notes
+#   Go            : CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH (this file). With cgo: use tonistiigi/xx (xx-go).
+#   Rust          : cargo + target triple via tonistiigi/xx (xx-cargo) or cargo-zigbuild; musl for static binaries.
+#   Java/Kotlin   : the jar is arch-independent: build it on $BUILDPLATFORM, COPY into a multi-arch JRE base.
+#   Node/Python   : pure-JS / pure-Python deps: install on $BUILDPLATFORM and copy. Native addons / wheels with C
+#                   (bcrypt, sharp, numpy from source, psycopg non-binary): install in the TARGET stage — that step
+#                   is emulated on the Mac, so prefer a native amd64 builder node (BUILDER_MODE=multinode/remote).
+#   .NET          : dotnet publish -r linux-$TARGETARCH on $BUILDPLATFORM (map amd64 -> x64).
+ARG GO_VERSION=1.27.1
+# Pin bases by digest in real projects: golang:1.27.1-alpine@sha256:<digest> (Renovate/Dependabot keep them fresh).
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+ARG TARGETOS TARGETARCH VERSION=dev
+WORKDIR /src
+COPY go.mod go.sum* ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY . .
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o /out/app ./
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/app /app
+USER nonroot:nonroot
+ENTRYPOINT ["/app"]

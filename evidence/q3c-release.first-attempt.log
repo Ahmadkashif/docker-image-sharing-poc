@@ -1,0 +1,326 @@
+# Q3 release of the NEW app pingboard (not tidewatch) from the Linux build host, no QEMU/binfmt on it 2026-10-14T18:57:43+05:00
+binfmt handlers on the build host: python3.12 
+$ time bin/img -p verify-linux-vm-lab release ../poc-app/pingboard pingboard 1.0.0 -- --build-arg VERSION=1.0.0
+==> build zot.vmlab:5443/team/pingboard:1.0.0 for linux/amd64,linux/arm64 (builder img-vmlab-builder, transport registry, SOURCE_DATE_EPOCH=1788337528)
+#0 building with "img-vmlab-builder" instance using docker-container driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.08kB done
+#1 DONE 0.0s
+
+#2 resolve image config for docker-image://docker.io/docker/dockerfile:1
+#2 DONE 3.4s
+
+#3 docker-image://docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+#3 resolve docker.io/docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e 0.0s done
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 0B / 14.28MB 0.2s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 2.10MB / 14.28MB 1.2s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 4.19MB / 14.28MB 1.4s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 5.24MB / 14.28MB 1.5s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 7.34MB / 14.28MB 1.7s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 8.39MB / 14.28MB 1.8s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 9.44MB / 14.28MB 2.0s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 10.49MB / 14.28MB 2.3s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 11.53MB / 14.28MB 2.4s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 12.58MB / 14.28MB 2.7s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 13.63MB / 14.28MB 3.0s
+#3 sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 14.28MB / 14.28MB 3.0s done
+#3 extracting sha256:9d2b4f57f9e20f33279375ce25c6ff14f30f64270ed5c7b613b2b30256754f62 0.1s done
+#3 DONE 3.1s
+
+#4 resolve image config for docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#4 DONE 2.5s
+
+#5 [linux/arm64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#5 DONE 1.9s
+
+#6 [linux/amd64 internal] load metadata for docker.io/library/golang:1.27.2-alpine
+#6 ...
+
+#7 [linux/amd64 internal] load metadata for gcr.io/distroless/static-debian13:nonroot
+#7 DONE 2.1s
+
+#6 [linux/amd64 internal] load metadata for docker.io/library/golang:1.27.2-alpine
+#6 DONE 2.5s
+
+#8 [internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [internal] load build context
+#9 DONE 0.0s
+
+#10 [auth] sharing credentials for zot.vmlab:5443
+#10 DONE 0.0s
+
+#11 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 0.0s done
+#11 DONE 0.0s
+
+#12 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#12 resolve gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3 0.0s done
+#12 DONE 0.0s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 resolve docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d 0.0s done
+#13 DONE 0.0s
+
+#14 importing cache manifest from zot.vmlab:5443/team/pingboard:buildcache
+#14 ERROR: failed to configure registry cache importer: zot.vmlab:5443/team/pingboard:buildcache: not found
+
+#9 [internal] load build context
+#9 transferring context: 2.01kB done
+#9 DONE 0.0s
+
+#12 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#12 DONE 0.2s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0B / 32B 0.2s
+#13 sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 0B / 126B 0.2s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 0B / 71.15MB 0.2s
+#13 sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 0B / 247.53kB 0.2s
+#13 ...
+
+#15 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#15 resolve docker.io/docker/buildkit-syft-scanner:stable-1 0.7s done
+#15 DONE 0.7s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 32B / 32B 0.9s done
+#13 sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 126B / 126B 0.9s done
+#13 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 0B / 3.85MB 0.2s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 4.19MB / 71.15MB 2.0s
+#13 sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 247.53kB / 247.53kB 2.2s done
+#13 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 1.05MB / 3.85MB 2.0s
+#13 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 2.10MB / 3.85MB 2.4s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 8.39MB / 71.15MB 3.5s
+#13 ...
+
+#12 [linux/arm64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#12 sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 143.34kB / 143.34kB 1.6s done
+#12 sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 311B / 311B 0.4s done
+#12 sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a 351B / 351B 0.8s done
+#12 sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 80B / 80B 0.9s done
+#12 sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 162B / 162B 0.4s done
+#12 sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 123B / 123B 0.5s done
+#12 sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a 67B / 67B 0.4s done
+#12 sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 188B / 188B 0.5s done
+#12 sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 32.09kB / 32.09kB 0.9s done
+#12 sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 254.67kB / 254.67kB 2.2s done
+#12 sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 12.68kB / 12.68kB 0.4s done
+#12 sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 288.06kB / 288.06kB 1.7s done
+#12 sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 124.50kB / 124.50kB 1.7s done
+#12 extracting sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 0.0s done
+#12 extracting sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+#12 extracting sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.0s done
+#12 extracting sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 0.0s done
+#12 extracting sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#12 extracting sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a done
+#12 extracting sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#12 extracting sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#12 extracting sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 done
+#12 extracting sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+#12 extracting sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+#12 extracting sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+#12 extracting sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 done
+#12 DONE 3.8s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 3.15MB / 3.85MB 3.5s
+#13 sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 3.85MB / 3.85MB 3.6s done
+#13 extracting sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 0.0s done
+#13 extracting sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 0.0s done
+#13 ...
+
+#11 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab 143.34kB / 143.34kB 1.7s done
+#11 sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 124.53kB / 124.53kB 1.4s done
+#11 extracting sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 0.0s done
+#11 extracting sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 done
+#11 extracting sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.0s done
+#11 extracting sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 0.0s done
+#11 extracting sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#11 DONE 5.0s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 ...
+
+#11 [linux/amd64 stage-1 1/2] FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+#11 extracting sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a done
+#11 extracting sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#11 extracting sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#11 extracting sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 done
+#11 extracting sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+#11 extracting sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+#11 extracting sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+#11 extracting sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab done
+#11 DONE 5.0s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 12.58MB / 71.15MB 6.0s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 16.78MB / 71.15MB 7.8s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 20.97MB / 71.15MB 9.9s
+#13 ...
+
+#15 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 16.78MB / 49.55MB 9.8s
+#15 ...
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 25.17MB / 71.15MB 12.2s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 29.36MB / 71.15MB 14.1s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 33.55MB / 71.15MB 16.1s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 37.75MB / 71.15MB 18.5s
+#13 ...
+
+#15 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 36.70MB / 49.55MB 19.8s
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 39.85MB / 49.55MB 21.2s
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 42.99MB / 49.55MB 23.0s
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 46.14MB / 49.55MB 24.9s
+#15 sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 49.55MB / 49.55MB 26.4s done
+#15 extracting sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f
+#15 ...
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 56.62MB / 71.15MB 27.6s
+#13 ...
+
+#15 docker-image://docker.io/docker/buildkit-syft-scanner:stable-1
+#15 extracting sha256:307ce207d6cb61564520be6064a834450b1cc937f720bee712ee09ed9ded309f 0.3s done
+#15 DONE 27.7s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 60.82MB / 71.15MB 28.7s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 65.01MB / 71.15MB 29.9s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 69.21MB / 71.15MB 30.8s
+#13 sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 71.15MB / 71.15MB 31.2s done
+#13 extracting sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2
+#13 extracting sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 1.7s done
+#13 DONE 33.0s
+
+#13 [linux/amd64 build 1/5] FROM docker.io/library/golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+#13 extracting sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 done
+#13 extracting sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 done
+#13 DONE 33.1s
+
+#16 [linux/amd64 build 2/5] WORKDIR /src
+#16 DONE 0.2s
+
+#17 [linux/amd64 build 3/5] COPY go.mod ./
+#17 DONE 0.0s
+
+#18 [linux/amd64 build 4/5] COPY *.go ./
+#18 DONE 0.0s
+
+#19 [linux/amd64->arm64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=arm64     go build -trimpath -ldflags "-s -w -X main.version=1.0.0 -X main.commit=none" -o /out/pingboard .
+#19 ...
+
+#20 [linux/amd64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=amd64     go build -trimpath -ldflags "-s -w -X main.version=1.0.0 -X main.commit=none" -o /out/pingboard .
+#20 DONE 8.3s
+
+#19 [linux/amd64->arm64 build 5/5] RUN --mount=type=cache,target=/root/.cache/go-build     CGO_ENABLED=0 GOOS=linux GOARCH=arm64     go build -trimpath -ldflags "-s -w -X main.version=1.0.0 -X main.commit=none" -o /out/pingboard .
+#19 DONE 8.3s
+
+#21 [linux/arm64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#21 DONE 0.0s
+
+#22 [linux/amd64 stage-1 2/2] COPY --from=build /out/pingboard /pingboard
+#22 DONE 0.0s
+
+#23 [linux/arm64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#23 0.058 time="2026-10-14T13:58:37Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#23 DONE 1.8s
+
+#24 [linux/amd64] generating sbom using docker.io/docker/buildkit-syft-scanner:stable-1
+#24 0.054 time="2026-10-14T13:58:37Z" level=info msg="starting syft scanner for buildkit v1.12.0"
+#24 DONE 1.8s
+
+#25 exporting to image
+#25 exporting layers
+#25 exporting layers 0.4s done
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC)
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC) 0.7s done
+#25 exporting manifest sha256:df6eccbb82c4825b6fb13f095f2d926fa380531abc9f787a38452617a0f0bdb5 done
+#25 exporting config sha256:01e1231aa7e39f39606261436e2b8386f16726bc1edd47357c776e791ec3ce36 done
+#25 exporting attestation manifest sha256:dadf59e8b1203d26223cb263e5e96c2db7dabc7106237dbee150279d134e52be
+#25 exporting attestation manifest sha256:dadf59e8b1203d26223cb263e5e96c2db7dabc7106237dbee150279d134e52be done
+#25 rewriting layers with source-date-epoch 1788337528 (2026-09-02 08:25:28 +0000 UTC) 0.7s done
+#25 exporting manifest sha256:39332765e7a23d8f5ee6a189130b3d703f8790d22ce17e13f1f41ad5c2a014d1 done
+#25 exporting config sha256:9611853fcda19acd713d45c1a1472d078cc056864ca8dda03bb8e34a93729af6 done
+#25 exporting attestation manifest sha256:26e2d94bddfad03b135c2a0efce05fd587c847c7ba4abb36000489494c9c136f done
+#25 exporting manifest list sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0
+#25 exporting manifest list sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0 done
+#25 pushing layers
+#25 pushing layers 3.4s done
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0
+#25 ...
+
+#26 exporting cache to registry
+#26 preparing build cache for export 0.6s done
+#26 sending cache export
+#26 writing layer sha256:2780920e5dbfbe103d03a583ed75345306e572ec5a48cb10361f046767d9f29a 2.0s done
+#26 writing layer sha256:218cf840d0d95a86231eb9d33d26ac8a520a4299c6096cb70a0c2fb2a87c9e0a 0.2s done
+#26 writing layer sha256:092ffe25bc66bd72c3a90abca78fdd65b5d94d0ec3f64854950793832c295a15 2.2s done
+#26 writing layer sha256:2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8 0.2s done
+#26 writing layer sha256:3214acf345c0cc6bbdb56b698a41ccdefc624a09d6beb0d38b5de0b2303ecaf4 done
+#26 writing layer sha256:3e2fdd137046d291fef33963968d9f6987598ee3cc5c4d0e5ae6d4a324ec8585 1.6s done
+#26 writing layer sha256:401d177fd1e8a1e0d7a48139788d026e9a2e919ccb122bedd110ac7cf351f53e 0.2s done
+#26 writing layer sha256:4f4fb700ef54461cfa02571ae0db9a0dc1e0cdb5577484a6d75e68dc38e8acc1 0.6s done
+#26 writing layer sha256:52630fc75a18675c530ed9eba5f55eca09b03e91bd5bc15307918bbc1a7e7296 0.2s done
+#26 writing layer sha256:6ed1ef0cb1159b9c93a24ceb88b987c6b3a8adff7160940c7c5e6bfc001f1766 0.2s done
+#26 writing layer sha256:6ff05f868da7888e9c1d6b4967ff0892cf86b51d23c81149794e72c001604803 0.6s done
+#26 writing layer sha256:7c12895b777bcaa8ccae0605b4de635b68fc32d60fa08f421dc3818bf55ee212 done
+#26 writing layer sha256:90b7748bfae56a469929b805e4e8326e5e0e97cac1653be06da3b9cdd0172b94 0.6s done
+#26 writing layer sha256:972c654eedec81fa11589b10a9abb1f83b9d2aa88ceee6918850c58b031ee26b 0.6s done
+#26 writing layer sha256:9e78613d2573425c55398da103351059e10df22e96c5ae44e720653772ceb224 0.6s done
+#26 writing layer sha256:a475c81ca8d0bb422c0ebd5035518eab5d911ddf163c28079e707128953e9c3f 0.5s done
+#26 writing layer sha256:b2b6413ae8f393d11d32262c8dc6bd053dbaea3d074f95edd5605d3eb116e3c2 0.7s done
+#26 writing layer sha256:b839dfae01f66e15c6a8b63520557ed315bdfe036342fa7a0c537259f10d7a9a done
+#26 writing layer sha256:bc02ebdbfa86dc5285767e2fdf5c5cf438787ce0701c7816a98e2c547ed32db2 0.5s done
+#26 writing layer sha256:c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0 0.0s done
+#26 writing layer sha256:c4bc6f35ff5e25aa1afe7a148a0b6f10a760f54e298f86a4a4d44b91f1afbfab 0.2s done
+#26 writing layer sha256:d6b1b89eccacc15c2420b2776d72c1dae334a00805ed9af54bf2f71e4d536f28 done
+#26 writing layer sha256:dd0da41db6852471688d50a336d039254f2a62a2579d4935596a4e54b7c15fc7
+#26 writing layer sha256:dd64bf2dd177757451a98fcdc999a339c35dee5d9872d8f4dc69c8f3c4dd0112 done
+#26 writing layer sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8
+#26 writing layer sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5
+#26 writing layer sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795
+#26 writing layer sha256:ebddc55facdc6b1f7e0f30816a5fc7cc62f38abdf76c0a8b0a0ce52085754795 done
+#26 writing layer sha256:edba2624a813a600eab3810e8dc2a555673b1a8b1d34d088ef446d810245a3ef
+#26 writing layer sha256:dd0da41db6852471688d50a336d039254f2a62a2579d4935596a4e54b7c15fc7 0.6s done
+#26 writing layer sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718
+#26 writing layer sha256:e2443a591f6296d5e94b53e785f358049a0c73d97e9e0941fcf48cf482f385b8 0.5s done
+#26 writing layer sha256:e2de96513ba9eb53b431787ec8a65cdde380ac4772a3e4c4b714dcfde2a102b5 0.6s done
+#26 writing layer sha256:f6069939f718601b38d25ec5ed5631ed047e4da24acec2e252f8f29d251be718 done
+#26 writing layer sha256:edba2624a813a600eab3810e8dc2a555673b1a8b1d34d088ef446d810245a3ef 0.6s done
+#26 ...
+
+#25 exporting to image
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0 1.9s done
+#25 DONE 7.3s
+
+#26 exporting cache to registry
+#26 writing config sha256:3168cac7556780f4160b9e28e07f1450e65ee85d99e5dcc369cdc2163d70dc13
+#26 writing config sha256:3168cac7556780f4160b9e28e07f1450e65ee85d99e5dcc369cdc2163d70dc13 1.0s done
+#26 writing cache image manifest sha256:7ad3dda9d600daf97cfdd9e4af4aa0fa7c0eb4b7215d2414e8499173e2ede0f6
+#26 sending cache export 6.2s done
+#26 writing cache image manifest sha256:7ad3dda9d600daf97cfdd9e4af4aa0fa7c0eb4b7215d2414e8499173e2ede0f6 0.6s done
+#26 DONE 6.8s
+
+#27 resolving provenance for metadata file
+#27 DONE 0.0s
+------
+ > importing cache manifest from zot.vmlab:5443/team/pingboard:buildcache:
+------
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0 [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0 [linux/arm64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+==> cosign sign (recursive: index + every platform manifest) zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0
+Flag --tlog-upload has been deprecated, prefer using a --signing-config file with no transparency log services
+Error: signing [zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0]: accessing entity: GET https://zot.vmlab:5443/v2/team/pingboard/manifests/sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0: unexpected status code 401 Unauthorized: {"code":"UNAUTHORIZED","message":"authentication required","detail":{"description":"The access controller was unable to authenticate the client. Often this will be accompanied by a WWW-Authenticate HTTP response header indicating how to authenticate."}}
+error during command execution: signing [zot.vmlab:5443/team/pingboard:1.0.0@sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0]: accessing entity: GET https://zot.vmlab:5443/v2/team/pingboard/manifests/sha256:2c55e194862b8d1649f8d00f5956ca2743dc02cb3d2c78a0203dd6e6b76d7cd0: unexpected status code 401 Unauthorized: {"code":"UNAUTHORIZED","message":"authentication required","detail":{"description":"The access controller was unable to authenticate the client. Often this will be accompanied by a WWW-Authenticate HTTP response header indicating how to authenticate."}}
+release_rc=1 wall=274s

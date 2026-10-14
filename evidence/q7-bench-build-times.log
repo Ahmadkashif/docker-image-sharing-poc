@@ -1,0 +1,27 @@
+# Q7 / row 9 build-time bench (Linux). App = the Mac bench app (tidewatch source, mac-source/phase-4/sample-app) so numbers compare with the Mac table.
+# Live host: NO emulation available or installed (binfmt: python3.12 ) -> emulated arm64 measured only inside a VM.
+# 2026-10-14T14:30:16Z [host] context=default cpu:  Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz 16  builder platforms: linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/386
+[host] go build, native amd64 (Dockerfile.emulated, amd64)     7.9 7.4 7.1  median=7.4s
+[host] go build, cross-compiled arm64 (Dockerfile.cross-norun) 7.7 7.9 7.4  median=7.7s
+[host] both platforms, cross-compiled (Dockerfile.cross-norun) 9.0 8.7 9.2  median=9.0s
+# builder img-bench-host removed
+
+# --- inside the srv-cstore KVM VM (4 vCPU of the same host CPU): register QEMU binfmt in the VM's OWN kernel (never on the live host)
+$ docker --context img-srv-cstore run --privileged --rm tonistiigi/binfmt --install arm64
+    "qemu-aarch64"
+  ]
+}
+live host binfmt unchanged: python3.12 
+Unable to find image 'busybox:1.37.0' locally
+1.37.0: Pulling from library/busybox
+Digest: sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+Status: Downloaded newer image for busybox:1.37.0
+# 2026-10-14T14:34:38Z [vm] context=img-srv-cstore cpu:  Intel(R) Core(TM) i7-10700K CPU @ 3.80GHz 4  builder platforms: linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/arm64, linux/386
+[vm] go build, native amd64 (Dockerfile.emulated, amd64)       12.6 11.9 11.4  median=11.9s
+[vm] go build, cross-compiled arm64 (Dockerfile.cross-norun)   11.9 11.5 12.5  median=11.9s
+[vm] both platforms, cross-compiled (Dockerfile.cross-norun)   15.6 15.3 15.8  median=15.6s
+[vm] go build, EMULATED arm64 under QEMU (Dockerfile.emulated) 126.8 124.2 126.8  median=126.8s
+[vm] both platforms, emulated arm64 compile (Dockerfile.emulated) 131.1 132.0 132.3  median=132.0s
+[vm] gzip -6 256MiB, linux/amd64 (s, in-container time)        5.92 6.17 6.16
+[vm] gzip -6 256MiB, linux/arm64 (s, in-container time)        30.13 29.84 29.90
+# builder img-bench-vm removed

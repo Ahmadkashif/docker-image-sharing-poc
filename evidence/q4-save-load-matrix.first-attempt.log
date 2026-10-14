@@ -1,0 +1,89 @@
+# Q4 save/load matrix on REAL Engine 29.9 servers: srv-classic (overlay2) vs srv-cstore (containerd store) 2026-10-14T19:06:24+05:00
+saving host: this Linux build box, amd64, Engine 29.8.1, containerd store
+$ docker buildx build --builder img-vmlab-builder --platform linux/amd64,linux/arm64 --load -t pingboard-lab:1.0.1 ../poc-app/pingboard
+#20 DONE 0.0s
+IMAGE                 ID             DISK USAGE   CONTENT SIZE   EXTRA
+pingboard-lab:1.0.1   6e56b33e1aea       20.5MB         7.59MB        
+├─ linux/amd64        d6a3e8cf779a       16.9MB         3.94MB        
+└─ linux/arm64        c2d9f0be197f       3.65MB         3.65MB        
+
+all-platform save manifest.json (legacy, what classic stores read): 1 entry/entries, config ['1fa4c450ca7b421b2e89']
+7026688 <tmp>
+3960320 <tmp>
+$ bin/img -p verify-linux-vm-lab --set TRANSPORT=oci-archive --set CACHE=none build ../poc-app/pingboard pingboard 1.0.1
+dist/pingboard-1.0.1.oci.tar sha256:dc4aea335420f1c23b40bf495d0e0dec7013a5286a6e38d955d59564aeb88013
+$ regctl image export --platform linux/amd64 zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+regctl rc=125 Run 'docker run --help' for more information
+0 <tmp>
+================= srv-classic (overlay2 29.9.0)
+--- docker load < all.tar
+Loaded image: pingboard-lab:1.0.1
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+--- docker load < amd64.tar
+Loaded image: pingboard-lab:1.0.1
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+--- docker load < oci.tar
+invalid archive: does not contain a manifest.json
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+--- docker load < regctl-amd64.tar
+invalid archive: does not contain a manifest.json
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+================= srv-cstore (overlayfs 29.9.0)
+--- docker load < all.tar
+Loaded image: pingboard-lab:1.0.1
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: arm64
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+Error response from daemon: invalid reference format
+loaded zot.vmlab:5443/team/pingboard:<none> ->  ; platforms in store: 
+arm64 absent
+docker: invalid reference format
+
+Run 'docker run --help' for more information
+--- docker load < amd64.tar
+Loaded image: pingboard-lab:1.0.1
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+Error response from daemon: invalid reference format
+loaded zot.vmlab:5443/team/pingboard:<none> ->  ; platforms in store: 
+arm64 absent
+docker: invalid reference format
+
+Run 'docker run --help' for more information
+--- docker load < oci.tar
+Loaded image: zot.vmlab:5443/team/pingboard:1.0.1
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+Error response from daemon: invalid reference format
+loaded zot.vmlab:5443/team/pingboard:<none> ->  ; platforms in store: 
+arm64 absent
+docker: invalid reference format
+
+Run 'docker run --help' for more information
+loaded zot.vmlab:5443/team/pingboard:1.0.1 -> linux/amd64 ; platforms in store: arm64
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+--- docker load < regctl-amd64.tar
+unrecognized image format
+loaded pingboard-lab:1.0.1 -> linux/amd64 ; platforms in store: 
+arm64 absent
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+Error response from daemon: invalid reference format
+loaded zot.vmlab:5443/team/pingboard:<none> ->  ; platforms in store: 
+arm64 absent
+docker: invalid reference format
+
+Run 'docker run --help' for more information
+loaded zot.vmlab:5443/team/pingboard:1.0.1 -> linux/amd64 ; platforms in store: arm64
+  run: {"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"am
+================= single-arch pull then save WITHOUT --platform (srv-cstore)
+save_rc=0
+save_with_platform_rc=0

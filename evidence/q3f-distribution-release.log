@@ -1,0 +1,32 @@
+# Row 1a on real Linux: full release + deploy against Distribution registry:3.1.2 2026-10-14T19:58:07+05:00
+Login Succeeded
+img: stored credentials for dist.vmlab:5443 (<repo>/lab/.host/docker-config/config.json) — no dockerd involved
+Private key written to cosign.key
+Public key written to cosign.pub
+==> cosign keys: <repo>/kit/build/verify-linux-vm-lab-dist/keys/cosign.key (secret) <repo>/kit/build/verify-linux-vm-lab-dist/keys/cosign.pub (distribute)
+$ bin/img -p verify-linux-vm-lab-dist release ../poc-app/pingboard pingboard 1.0.1-dist
+==> build dist.vmlab:5443/team/pingboard:1.0.1-dist for linux/amd64,linux/arm64 (builder img-vmlab-dist-builder, transport registry, SOURCE_DATE_EPOCH=1788337528)
+==> scan registry:dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349 [linux/amd64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan registry:dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349 [linux/arm64] fail-on=high only-fixed=yes
+No vulnerabilities found
+==> scan gate passed
+==> cosign sign (recursive: index + every platform manifest) dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+==> cosign verify dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+==> signature OK
+dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+Login Succeeded
+$ bin/img -p verify-linux-vm-lab-dist --set SERVER_SSH=deploy@srv-classic deploy dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349 -- --name pingboard-dist -p 8083:8080
+==> deploy dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349 -> deploy@srv-classic (linux/amd64)
+server: signature verified for dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+server: pulled linux/amd64 dist.vmlab:5443/team/pingboard:1.0.1-dist@sha256:2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+{"app":"pingboard","version":"1.0.1-dist","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"300296eccfb5","uptime":"5s","hits":1}
+
+cosign signature storage on Distribution (no referrers API -> tag fallback?):
+  tag: 1.0.1-dist
+  tag: sha256-2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349
+  tag: sha256-3d8b5895ec9d4797c3e134688bc57808e59b5ee220166fc31fa1492b4c7d1141
+  tag: sha256-6f4322d3742af5ad2aeaea05c7f7c89427f622aae4554207b1388f278912d237
+  tag: sha256-8e2fddf669ab2fcc73cdf047ff2278fc4df8c79a2851604b48bbc66d26b17659
+  tag: sha256-919557e4032a979c98449eac58ea1eb2b6936ed29d42fc4f3658e8548bbd7d9e
+failed to get manifest docker.io/team/pingboard:sha256-2f8310341ea3880c8689b491f63fe0fc014dcdb08a8a50beda39742abc85c349: unauthorized

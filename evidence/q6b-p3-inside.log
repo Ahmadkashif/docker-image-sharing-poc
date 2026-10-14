@@ -1,0 +1,170 @@
+# Q6 P3 INSIDE leg on srv-offline, now AIR-GAPPED (no route to the build host, registry, other VMs or internet) 2026-10-14T19:22:35+05:00
+$ vmlab net srv-offline airgap   # nft: drop all forwarded traffic to/from it (inet + bridge); operator console = ssh from the lab gateway only
+== isolation proof (from srv-offline)
+  zot.vmlab:5443 unreachable
+  10.77.0.12:22 unreachable
+  10.77.0.1:53 unreachable
+  registry-1.docker.io:443 unreachable
+  ping srv-cstore: no reply
+== the operator plugs in the media (ISO as a USB stick) + the key from a separate trusted channel
+srv-offline: attached /state/media/carry.iso as a USB mass-storage device
+srv-offline: attached /state/media/trust.iso as a USB mass-storage device
+srv-offline: attached /state/media/trust.iso as a USB mass-storage device
+sr1     267.1M CARRY           usb
+sr2       366K TRUST           usb
+== [ops] mount media, give the operator a working copy, name the inside registry
+/media/carry/dist:
+pingboard-1.0.1.signed.tar
+pingboard-1.0.1.signed.tar.sha256
+pingboard-1.0.2.oci.tar
+pingboard-1.0.2.oci.tar.sha256
+pingboard-1.0.2.oci.tar.sigstore.json
+tools.tar.zst
+tools.tar.zst.sha256
+
+/media/trust:
+cosign-p3.pub
+cosign-vmlab.pub
+cp: cannot open '/media/carry/dist/pingboard-1.0.2.oci.tar.sigstore.json' for reading: Permission denied
+== [ops] trust the inside CA (rendered install-trust.sh)
+sh: 0: cannot open /home/deploy/kit/templates/build/verify-linux-vm-lab-p3/server/install-trust.sh: No such file
+== (first copy failed: cosign writes the .sigstore.json bundle 0600 -> unreadable for the inside operator; template fix F8 chmod 0644; media re-cut as CARRY2)
+-rw-r--r-- 1 ops ops   8355840 Oct 14 14:22 pingboard-1.0.1.signed.tar
+-rw-r--r-- 1 ops ops        93 Oct 14 14:22 pingboard-1.0.1.signed.tar.sha256
+-rw-r--r-- 1 ops ops   8326144 Oct 14 14:22 pingboard-1.0.2.oci.tar
+-rw-r--r-- 1 ops ops        90 Oct 14 14:22 pingboard-1.0.2.oci.tar.sha256
+-rw-r--r-- 1 ops ops       383 Oct 14 14:23 pingboard-1.0.2.oci.tar.sigstore.json
+-rw-r--r-- 1 ops ops 262859044 Oct 14 14:22 tools.tar.zst
+-rw-r--r-- 1 ops ops        80 Oct 14 14:22 tools.tar.zst.sha256
+$ (cd dist && sha256sum -c tools.tar.zst.sha256) && docker load -i dist/tools.tar.zst
+tools.tar.zst: OK
+Loaded image: ghcr.io/sigstore/cosign/cosign:v3.1.3
+Loaded image: anchore/grype:v0.119.0
+Loaded image: quay.io/skopeo/stable:v1.22.3
+Loaded image: ghcr.io/regclient/regctl:v0.11.6
+Loaded image: ghcr.io/project-zot/zot:v2.1.21
+$ bin/render.py verify-linux-vm-lab-p3
+rendered verify-linux-vm-lab-p3   -> build/verify-linux-vm-lab-p3
+$ registry/mkcerts.sh build/verify-linux-vm-lab-p3/certs zot.inside
+created CA: build/verify-linux-vm-lab-p3/certs/ca.crt (name-constrained to: zot.inside)
+tls/registry.crt: OK
+leaf SANs: DNS:zot.inside
+Unable to find image 'httpd:2.4-alpine' locally
+docker: Error response from daemon: failed to resolve reference "docker.io/library/httpd:2.4-alpine": failed to do request: Head "https://registry-1.docker.io/v2/library/httpd/manifests/2.4-alpine": dial tcp: lookup registry-1.docker.io on 127.0.0.53:53: read udp 127.0.0.1:38977->127.0.0.53:53: i/o timeout
+
+Run 'docker run --help' for more information
+== [ops] trust the inside CA (rendered install-trust.sh)
+docker trusts zot.inside:5443
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+== re-run of the inside leg from CARRY3 (clean working copy) 2026-10-14T19:25:30+05:00
+mounted CARRY3
+$ (cd dist && sha256sum -c tools.tar.zst.sha256) && docker load -i dist/tools.tar.zst
+tools.tar.zst: OK
+Loaded image: ghcr.io/sigstore/cosign/cosign:v3.1.3
+Loaded image: anchore/grype:v0.119.0
+Loaded image: quay.io/skopeo/stable:v1.22.3
+Loaded image: ghcr.io/regclient/regctl:v0.11.6
+Loaded image: ghcr.io/project-zot/zot:v2.1.21
+Loaded image: httpd:2.4-alpine
+$ bin/render.py verify-linux-vm-lab-p3
+rendered verify-linux-vm-lab-p3   -> build/verify-linux-vm-lab-p3
+$ registry/mkcerts.sh build/verify-linux-vm-lab-p3/certs zot.inside
+created CA: build/verify-linux-vm-lab-p3/certs/ca.crt (name-constrained to: zot.inside)
+tls/registry.crt: OK
+leaf SANs: DNS:zot.inside
+$ registry/add-user.sh build/verify-linux-vm-lab-p3/auth ci-push  (password redacted)
+$ registry/add-user.sh build/verify-linux-vm-lab-p3/auth server-pull  (password redacted)
+$ registry/add-user.sh build/verify-linux-vm-lab-p3/auth <redacted>  (password redacted)
+$ docker compose --env-file build/verify-linux-vm-lab-p3/registry/.env -f registry/compose.yaml up -d
+img-registry-verify-linux-vm-lab-p3-zot-1 ghcr.io/project-zot/zot:v2.1.21 Up 4 seconds 127.0.0.1:5443->5443/tcp
+== [ops] trust the inside CA (rendered install-trust.sh)
+docker trusts zot.inside:5443
+OS trust store updated (one file per profile, so several registries/CAs can coexist)
+Login Succeeded
+== tamper test: one flipped byte in a copy of the archive
+$ bin/img -p verify-linux-vm-lab-p3 import /tmp/tamper/pingboard-1.0.2.oci.tar zot.inside:5443/team/pingboard:1.0.2
+  -> refused (rc=1)
+== tamper test 2: flipped byte AND a recomputed .sha256 (attacker controls the media): cosign verify-blob must refuse
+pingboard-1.0.2.oci.tar: FAILED
+sha256sum: WARNING: 1 computed checksum did NOT match
+img: checksum mismatch
+pingboard-1.0.2.oci.tar: OK
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the blob.
+Error: open /tmp/tamper/pingboard-1.0.2.oci.tar: no such file or directory
+error during command execution: open /tmp/tamper/pingboard-1.0.2.oci.tar: no such file or directory
+  -> refused (rc=1)
+== genuine archive
+$ bin/img -p verify-linux-vm-lab-p3 import dist/pingboard-1.0.2.oci.tar zot.inside:5443/team/pingboard:1.0.2
+pingboard-1.0.2.oci.tar: OK
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the blob.
+Verified OK
+==> regctl image copy --referrers --digest-tags --force-recursive ocidir@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e -> zot.inside:5443/team/pingboard:1.0.2
+zot.inside:5443/team/pingboard:1.0.2
+zot.inside:5443/team/pingboard:1.0.2@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e
+== template fix F10: verify-blob/sign-blob only saw $PWD, so an archive under /tmp failed with 'no such file' (refused for the WRONG reason). Fixed kit copied in by the operator (stand-in for the next media), tamper test 2 re-run:
+$ bin/img -p verify-linux-vm-lab-p3 import /tmp/tamper/pingboard-1.0.2.oci.tar zot.inside:5443/team/pingboard:1.0.2   # byte flipped + sha256 recomputed
+pingboard-1.0.2.oci.tar: OK
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the blob.
+Error: failed to verify signature: could not verify message: invalid signature when validating ASN.1 encoded signature
+error during command execution: failed to verify signature: could not verify message: invalid signature when validating ASN.1 encoded signature
+  -> refused (rc=1)
+$ (control) same command on an untampered copy under /tmp
+pingboard-1.0.2.oci.tar: OK
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the blob.
+Verified OK
+==> regctl image copy --referrers --digest-tags --force-recursive ocidir@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e -> zot.inside:5443/team/pingboard:1.0.2
+zot.inside:5443/team/pingboard:1.0.2
+zot.inside:5443/team/pingboard:1.0.2@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e
+== P3a deploy of the imported archive (trust from import: sha256 + verify-blob; VERIFY_ON_SERVER=no in this profile)
+Login Succeeded
+$ bin/img -p verify-linux-vm-lab-p3 deploy zot.inside:5443/team/pingboard:1.0.2@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e -- --name pingboard -p 8080:8080
+==> deploy zot.inside:5443/team/pingboard:1.0.2@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e -> deploy@localhost (linux/amd64)
+Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.
+server: pulled linux/amd64 zot.inside:5443/team/pingboard:1.0.2@sha256:34a0b52b3405a8937b72697b2c8179a80dda3157f1199fc4fb5e5faa6b39475e
+8e6d26fe3da641445fb267b3301da5d2a572a7abc5c58081c6b4211c3449dca4
+{"app":"pingboard","version":"1.0.2","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"8e6d26fe3da6","uptime":"6s","hits":1}
+
+== P3b: registry-SIGNED image carried with img export (signature referrers inside the tar) -> import -> cosign verify inside
+Login Succeeded
+$ bin/img -p verify-linux-vm-lab-p3 import dist/pingboard-1.0.1.signed.tar zot.inside:5443/team/pingboard-signed:1.0.1
+pingboard-1.0.1.signed.tar: OK
+==> no dist/pingboard-1.0.1.signed.tar.sigstore.json: relying on the image signatures carried inside the archive (verify after import)
+==> regctl image copy --referrers --digest-tags --force-recursive ocidir@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> zot.inside:5443/team/pingboard-signed:1.0.1
+zot.inside:5443/team/pingboard-signed:1.0.1
+zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+$ bin/img -p verify-linux-vm-lab-p3 --set COSIGN_PUB=/media/trust/cosign-vmlab.pub verify zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+==> cosign verify zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.inside:5443/team/pingboard-signed@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+==> signature OK
+$ (negative) verify the same image with the P3 key it was NOT signed with
+==> cosign verify zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+Error: no matching attestations: failed to verify signature: could not verify envelope: accepted signatures do not match threshold, Found: 0, Expected 1
+error during command execution: no matching attestations: failed to verify signature: could not verify envelope: accepted signatures do not match threshold, Found: 0, Expected 1
+  -> refused (rc=1)
+Login Succeeded
+$ bin/img -p verify-linux-vm-lab-p3 --set VERIFY_ON_SERVER=yes --set COSIGN_PUB=/media/trust/cosign-vmlab.pub deploy zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -- --name pingboard-signed -p 8081:8080
+==> deploy zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> deploy@localhost (linux/amd64)
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.inside:5443/team/pingboard-signed@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+server: signature verified for zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+server: pulled linux/amd64 zot.inside:5443/team/pingboard-signed:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+f7f050e58a0dad8451594d82c1ab4e5f8d97ba16f336adf27a80a748246829c0
+{"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"f7f050e58a0d","uptime":"6s","hits":1}
+
+pingboard-signed zot.inside:5443/team/pingboard-signed:1.0.1 Up 6 seconds (health: starting)
+pingboard zot.inside:5443/team/pingboard:1.0.2 Up 30 seconds (healthy)
+img-registry-verify-linux-vm-lab-p3-zot-1 ghcr.io/project-zot/zot:v2.1.21 Up About a minute
+== still air-gapped?
+  internet unreachable

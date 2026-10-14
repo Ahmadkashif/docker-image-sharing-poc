@@ -1,0 +1,21 @@
+# Q10 Forgejo OCI registry smoke test 2026-10-14T19:56:35+05:00 (throwaway container on the lab network, no host port)
+Unable to find image 'codeberg.org/forgejo/forgejo:15.0.10' locally
+Digest: sha256:7b2f61163ff1d19f2aaf62d37ae4e805e822c2f86d6628b2bd468470929beacb
+forgejo: forgejo version 15.0.10+gitea-1.22.0 (release name 15.0.10) built with GNU Make 4.4.1, go1.26.9 : bindata, timetzdata, sqlite, sqlite_unlock_notify
+tokens: ci-push (write:package), server-pull (read:package) — values redacted
+== 1. push the multi-arch index + its referrers (regctl image copy --referrers) with the write:package token
+forgejo.vmlab:3000/lab-admin/pingboard:1.0.1
+  rc=0
+application/vnd.oci.image.index.v1+json 4 entriesdigest at forgejo: sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf (source: sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf)
+== 2. OCI 1.1 referrers API: GET /v2/lab-admin/pingboard/referrers/<digest>
+  http=404 body=
+  tags (cosign falls back to sha256-<digest> tags when there is no referrers API): 1.0.1 sha256-1658c6d978d915f07f04b466c66d1476d4657b536aca5005afeaf8740690b972 sha256-1a7f142723c1d35ec14214ca28790f0b3e8cfe6bd6f07209909d750769f7e0a8 sha256-b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf sha256-b759ec691461f6de3c8db0993fd913f634f7a1c9c1dee471d5310a05c0815076 sha256-df338683b11fbc76dcb49a611cb14c3cb9a64d7eeaf618198f735ca3f99a4e65 
+== 3. cosign 3 sign + verify AT forgejo (key-based, no tlog)
+Signing artifact...
+Pushing signature to: forgejo.vmlab:3000/lab-admin/pingboard
+  verify (read:package token): OK
+  tags after signing: 1.0.1 sha256-1658c6d978d915f07f04b466c66d1476d4657b536aca5005afeaf8740690b972 sha256-1a7f142723c1d35ec14214ca28790f0b3e8cfe6bd6f07209909d750769f7e0a8 sha256-b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf sha256-b759ec691461f6de3c8db0993fd913f634f7a1c9c1dee471d5310a05c0815076 sha256-df338683b11fbc76dcb49a611cb14c3cb9a64d7eeaf618198f735ca3f99a4e65 
+== 4. read-only credential: push with the read:package token must be refused
+failed to send blob post, ref forgejo.vmlab:3000/lab-admin/robot-test@sha256:b759ec691461f6de3c8db0993fd913f634f7a1c9c1dee471d5310a05c0815076: unauthorized
+  push_with_read_token rc=1
+smoke container removed

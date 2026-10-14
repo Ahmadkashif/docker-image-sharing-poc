@@ -1,0 +1,21 @@
+# Q9 the five open questions, answered for THIS box as a stand-in server (read-only commands) 2026-10-14T19:47:02+05:00
+$ uname -m
+x86_64
+$ bin/detect-host.sh --facts | grep -E "HOST_ARCH|DOCKER_SERVER=|CONTAINERD|DOCKERHUB_HTTP|ROOTLESS"
+HOST_ARCH=amd64
+DOCKER_SERVER=29.8.1
+CONTAINERD_IMAGE_STORE=yes
+ROOTLESS=no
+DOCKERHUB_HTTP=401
+$ curl -s -o /dev/null -w "%{http_code}" https://registry-1.docker.io/v2/  (internet egress)
+401
+$ curl --cacert <lab CA> --resolve zot.vmlab:5443:127.0.0.1 https://zot.vmlab:5443/v2/   (registry reachability from the host, verified TLS)
+401
+$ systemctl is-active ssh sshd; ss -ltn "( sport = :22 )"
+inactive inactive 
+State Recv-Q Send-Q Local Address:Port Peer Address:PortProcess
+$ id -un; id -nG
+<user>
+<user> adm cdrom sudo dip plugdev users lpadmin docker
+$ getent group docker
+docker:<user>

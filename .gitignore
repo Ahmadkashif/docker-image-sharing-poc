@@ -1,0 +1,9 @@
+# generated per machine: rendered config, CAs, keys, htpasswd, passwords, archives
+kit/build/
+kit/dist/
+# lab state: VM disks, cloud image cache, lab ssh key, isolated docker config with lab logins
+lab/.state/
+lab/.host/
+*.key
+*.pem
+.env

@@ -1,0 +1,85 @@
+# Self-hosted OCI registry with TLS + auth, plus an optional Docker Hub pull-through mirror.
+# Rendered env per profile:  build/<profile>/registry/.env   (bin/render.py)
+#   docker compose --env-file build/<profile>/registry/.env -f registry/compose.yaml up -d
+# COMPOSE_PROFILES in that .env selects: zot | distribution  [+ mirror]
+# Exposure: publish only on a LAN/VPN address (REGISTRY_PUBLISH=<lan-ip>:<port>); never 0.0.0.0 on a public host.
+name: ${COMPOSE_PROJECT:-img-registry}
+
+x-hardening: &hardening
+  restart: unless-stopped
+  # root in the container but WITHOUT CAP_DAC_OVERRIDE (cap_drop ALL): it can only read the key/htpasswd because they
+  # are 0640 and group-owned by REGISTRY_FILES_GID (the gid that ran mkcerts.sh/add-user.sh, rendered into .env).
+  # Docker Desktop hides host ownership, so this only bites on Linux hosts ("open ...: permission denied").
+  user: "0:${REGISTRY_FILES_GID:-0}"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+  logging: { driver: local, options: { max-size: 20m, max-file: "5" } }
+
+services:
+  zot:                                    # default: OCI-native, per-repo RBAC, online GC + retention, referrers API
+    <<: *hardening
+    profiles: [zot]
+    image: ${ZOT_IMAGE:?set ZOT_IMAGE}
+    command: ["serve", "/etc/zot/config.json"]
+    ports: ["${REGISTRY_PUBLISH:?set REGISTRY_PUBLISH}:5443"]
+    volumes:
+      - ${ZOT_CONFIG:?}:/etc/zot/config.json:ro
+      # directories, not single files: a single-file bind mount keeps pointing at the old inode after
+      # add-user.sh / cert renewal replace the file (atomic rename) -> "no such file" at request time.
+      - ${CERTS_DIR:?}/tls:/etc/zot/certs:ro          # registry.crt/.key only (the CA key lives in certs/ca/, never mounted)
+      - ${AUTH_DIR:?}:/etc/zot/auth:ro
+      - zot-data:/var/lib/registry
+    networks: { default: { aliases: ["${REGISTRY_HOST:?}"] } }
+
+  distribution:                           # minimal alternative: one static binary, htpasswd = all-or-nothing access
+    <<: *hardening
+    profiles: [distribution]
+    image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5443
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/registry.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/registry.key
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: registry
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"      # allow manifest DELETE (needed for cleanup + GC)
+      OTEL_TRACES_EXPORTER: none
+    ports: ["${REGISTRY_PUBLISH}:5443"]
+    volumes:
+      - ${CERTS_DIR}/tls:/certs:ro
+      - ${AUTH_DIR}:/auth:ro
+      - registry-data:/var/lib/registry
+    networks: { default: { aliases: ["${REGISTRY_HOST}"] } }
+
+  mirror:                                 # read-only pull-through cache of Docker Hub (rate limits, speed, outages)
+    <<: *hardening
+    profiles: [mirror]
+    image: ${REGISTRY_IMAGE:?set REGISTRY_IMAGE}
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5444
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/registry.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/registry.key
+      REGISTRY_PROXY_REMOTEURL: ${MIRROR_UPSTREAM:-https://registry-1.docker.io}
+      REGISTRY_PROXY_TTL: 168h
+      # Optional: a Docker Hub (read-only PAT) login lifts the 100 pulls/6h anonymous limit. Do NOT use an account that
+      # can read private repos: every LAN client of the mirror could then pull them.
+      # REGISTRY_PROXY_USERNAME: ...
+      # REGISTRY_PROXY_PASSWORD: ...
+      OTEL_TRACES_EXPORTER: none
+    ports: ["${MIRROR_PUBLISH:?set MIRROR_PUBLISH}:5444"]
+    volumes:
+      - ${CERTS_DIR}/tls:/certs:ro
+      - mirror-data:/var/lib/registry
+    networks: { default: { aliases: ["${MIRROR_HOST:-mirror.invalid}"] } }
+
+volumes:
+  zot-data: {}
+  registry-data: {}
+  mirror-data: {}
+
+networks:
+  default:
+    name: ${REGISTRY_NETWORK:-img-registry}
+    external: ${REGISTRY_NETWORK_EXTERNAL:-false}

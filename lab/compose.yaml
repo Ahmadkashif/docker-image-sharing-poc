@@ -1,0 +1,16 @@
+# VM lab container (project img-vmlab). Loopback-only SSH forwards to the VMs; no host network changes.
+name: img-vmlab
+services:
+  vmlab:
+    build: ./vmlab
+    image: img-vmlab:1
+    container_name: img-vmlab
+    devices: ["/dev/kvm", "/dev/net/tun"]
+    cap_add: [NET_ADMIN]
+    sysctls: { net.ipv4.ip_forward: "1" }
+    volumes: ["./.state:/state"]
+    ports: ["127.0.0.1:22011:22011", "127.0.0.1:22012:22012", "127.0.0.1:22013:22013", "127.0.0.1:22014:22014"]
+    networks: { lab: { aliases: [vmlab-gw] } }
+    restart: "no"
+networks:
+  lab: { name: img-vmlab, external: true }

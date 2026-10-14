@@ -1,0 +1,59 @@
+# Q2 real-host registries 2026-10-14T18:53:14+05:00. Registry host = this Linux box (amd64, Engine 29.8.1). Passwords redacted.
+# First attempt (kit as shipped from the Mac) failed on Linux: both registries crash-looped with
+#   zot:          open /etc/zot/auth/htpasswd: permission denied
+#   distribution: open /certs/registry.key: permission denied
+# cause: root in the container has no CAP_DAC_OVERRIDE (cap_drop ALL) and the files were 0600 owned by the host user.
+# Template fix F2 (compose user 0:REGISTRY_FILES_GID + 0640 key/htpasswd). Re-run from scratch below:
+rendered verify-linux-vm-lab      -> build/verify-linux-vm-lab
+$ registry/mkcerts.sh build/verify-linux-vm-lab/certs zot.vmlab mirror.vmlab
+created CA: build/verify-linux-vm-lab/certs/ca.crt (name-constrained to: zot.vmlab mirror.vmlab)
+tls/registry.crt: OK
+leaf SANs: DNS:zot.vmlab,DNS:mirror.vmlab
+$ registry/add-user.sh build/verify-linux-vm-lab/auth ci-push
+generated password for ci-push: <redacted>
+htpasswd: ci-push set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+$ registry/add-user.sh build/verify-linux-vm-lab/auth server-pull
+generated password for server-pull: <redacted>
+htpasswd: server-pull set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+$ registry/add-user.sh build/verify-linux-vm-lab/auth <redacted>
+generated password for <redacted>: <redacted>
+htpasswd: <redacted> set in build/verify-linux-vm-lab/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+  build/verify-linux-vm-lab/auth:
+  total 4
+  -rw-r----- 1 1000 1000 218 Oct 14 18:53 htpasswd
+  
+  build/verify-linux-vm-lab/certs/tls:
+  total 8
+  -rw-r--r-- 1 1000 1000 692 Oct 14 18:53 registry.crt
+  -rw-r----- 1 1000 1000 227 Oct 14 18:53 registry.key
+$ docker compose --env-file build/verify-linux-vm-lab/registry/.env -f registry/compose.yaml up -d
+rendered verify-linux-vm-lab-dist -> build/verify-linux-vm-lab-dist
+$ registry/mkcerts.sh build/verify-linux-vm-lab-dist/certs dist.vmlab 
+created CA: build/verify-linux-vm-lab-dist/certs/ca.crt (name-constrained to: dist.vmlab)
+tls/registry.crt: OK
+leaf SANs: DNS:dist.vmlab
+$ registry/add-user.sh build/verify-linux-vm-lab-dist/auth ci-push
+generated password for ci-push: <redacted>
+htpasswd: ci-push set in build/verify-linux-vm-lab-dist/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+$ registry/add-user.sh build/verify-linux-vm-lab-dist/auth server-pull
+generated password for server-pull: <redacted>
+htpasswd: server-pull set in build/verify-linux-vm-lab-dist/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+$ registry/add-user.sh build/verify-linux-vm-lab-dist/auth <redacted>
+generated password for <redacted>: <redacted>
+htpasswd: <redacted> set in build/verify-linux-vm-lab-dist/auth/htpasswd (restart not needed for Zot; Distribution re-reads on change)
+  build/verify-linux-vm-lab-dist/auth:
+  total 4
+  -rw-r----- 1 1000 1000 218 Oct 14 18:53 htpasswd
+  
+  build/verify-linux-vm-lab-dist/certs/tls:
+  total 8
+  -rw-r--r-- 1 1000 1000 676 Oct 14 18:53 registry.crt
+  -rw-r----- 1 1000 1000 227 Oct 14 18:53 registry.key
+$ docker compose --env-file build/verify-linux-vm-lab-dist/registry/.env -f registry/compose.yaml up -d
+img-registry-verify-linux-vm-lab-dist-distribution-1 | registry:3.1.2 | Up 6 seconds | 5000/tcp, 127.0.0.1:15443->5443/tcp
+img-registry-verify-linux-vm-lab-zot-1 | ghcr.io/project-zot/zot:v2.1.21 | Up 7 seconds | 127.0.0.1:5443->5443/tcp
+img-registry-verify-linux-vm-lab-mirror-1 | registry:3.1.2 | Up 7 seconds | 5000/tcp, 127.0.0.1:5444->5444/tcp
+== host listeners (bind check)
+LISTEN 0      4096       127.0.0.1:15443      0.0.0.0:*          
+LISTEN 0      4096       127.0.0.1:5443       0.0.0.0:*          
+LISTEN 0      4096       127.0.0.1:5444       0.0.0.0:*          

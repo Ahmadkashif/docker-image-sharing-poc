@@ -1,0 +1,10 @@
+# Docker Hub pull-through mirror (registry:3.1.2) used as dockerd registry-mirrors on srv-cstore and as BuildKit mirror on the build host 2026-10-14T19:19:08+05:00
+srv-cstore registry-mirrors=["https://mirror.vmlab:5444/"]
+{"repositories":["docker/buildkit-syft-scanner","docker/dockerfile","library/busybox","library/golang"]}
+
+mirror access log (path, client user-agent):
+  /v2/library/busybox/manifests/sha256:4c1f36753ad7ca27822b3caf7fa5ecb469b9a7ac64103b1d8bb5b  <- docker/29.9.0
+  /v2/library/busybox/manifests/sha256:66a6306db78bf2dbf3487f293aa8d6990d8e506fdffab9cc43fe4  <- docker/29.9.0
+  /v2/library/busybox/manifests/sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a0  <- docker/29.9.0
+  /v2/library/golang/manifests/sha256:3b15ba438c60ab8fabe5fee3b11025c0049e358b31feff384648f1  <- buildkit/v0.33
+  /v2/library/golang/manifests/sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f050  <- buildkit/v0.33

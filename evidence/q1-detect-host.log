@@ -1,0 +1,67 @@
+# Q1 2026-10-14T18:38:57+05:00 — kit copied unchanged from mac-source/templates
+$ bin/detect-host.sh
+  ROLE=server
+  HOST_OS=linux
+  HOST_ARCH=amd64
+  DISTRO=ubuntu-24.04
+  CPUS=16
+  RAM_GB=31
+  DOCKER_CLIENT=29.8.1
+  DOCKER_SERVER=29.8.1
+  DOCKER_SERVER_OS=Ubuntu 24.04.5 LTS
+  DOCKER_SERVER_ARCH=amd64
+  STORAGE_DRIVER=overlayfs
+  CONTAINERD_IMAGE_STORE=yes
+  ROOTLESS=no
+  INSECURE_REGISTRIES=
+  REGISTRY_MIRRORS=
+  BUILDX=0.37.1
+  BUILDER_PLATFORMS=linux/amd64,linux/amd64/v2,linux/amd64/v3
+  CAN_BUILD_AMD64=yes
+  CAN_BUILD_ARM64=no
+  ROSETTA=n/a
+  DISK_FREE_GB=804
+  SSH_CLIENT=yes
+  ZSTD=yes
+  REGISTRY=
+  REGISTRY_HTTP=
+  REGISTRY_TLS=
+  DOCKERHUB_HTTP=401
+role=server arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1
+
+  WARN  rootful docker: members of the docker group are root-equivalent
+RESULT=OK
+
+$ bin/render.py --check-agnostic
+check-agnostic: OK (no host paths, lab names or private IPs in bin/ registry/ server/ examples/ Makefile README)
+rc=0
+$ render p1-selfhosted-registry + detect-host --check --role client
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=registry.example.internal:5443:000
+
+  FAIL  registry registry.example.internal:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+rc=3
+$ render p1-company-registry + detect-host --check --role client
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=registry.example.internal:000
+
+  FAIL  registry registry.example.internal not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+rc=3
+$ render p2-lan-only + detect-host --check --role client
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=registry.example.internal:5443:000
+
+  FAIL  registry registry.example.internal:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+rc=3
+$ render p3-airgapped + detect-host --check --role client
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=registry.inside.example.internal:5443:000
+
+  FAIL  registry registry.inside.example.internal:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+rc=3
+$ render p4-arm64-server + detect-host --check --role client
+role=client arch=amd64 docker=29.8.1(amd64, containerd-store=yes) buildx=0.37.1 registry=registry.example.internal:5443:000
+
+  FAIL  registry registry.example.internal:5443 not reachable over verified TLS (HTTP 000)
+RESULT=NOT-MET
+rc=3

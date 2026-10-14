@@ -1,0 +1,61 @@
+# validate.sh on Linux (unchanged kit) 2026-10-14T18:39:10+05:00
+render all profiles
+  ok   render --all
+  ok   p1-company-registry daemon.json
+  ok   p1-company-registry install-trust.sh syntax
+  ok   p1-company-registry profile.env sources
+  ok   p1-selfhosted-registry daemon.json
+  ok   p1-selfhosted-registry install-trust.sh syntax
+  ok   p1-selfhosted-registry profile.env sources
+  ok   p1-selfhosted-registry zot-config.json
+  ok   p1-selfhosted-registry compose config
+  ok   p2-lan-only daemon.json
+  ok   p2-lan-only install-trust.sh syntax
+  ok   p2-lan-only profile.env sources
+  ok   p2-lan-only zot-config.json
+  ok   p2-lan-only compose config
+  ok   p3-airgapped daemon.json
+  ok   p3-airgapped install-trust.sh syntax
+  ok   p3-airgapped profile.env sources
+  ok   p3-airgapped zot-config.json
+  ok   p3-airgapped compose config
+  ok   p4-arm64-server daemon.json
+  ok   p4-arm64-server install-trust.sh syntax
+  ok   p4-arm64-server profile.env sources
+  ok   p4-arm64-server zot-config.json
+  ok   p4-arm64-server compose config
+  ok   verify-mac-lab daemon.json
+  ok   verify-mac-lab install-trust.sh syntax
+  ok   verify-mac-lab profile.env sources
+  ok   verify-mac-lab zot-config.json
+  ok   verify-mac-lab compose config
+  ok   verify-mac-lab-dist daemon.json
+  ok   verify-mac-lab-dist install-trust.sh syntax
+  ok   verify-mac-lab-dist profile.env sources
+  ok   verify-mac-lab-dist zot-config.json
+  ok   verify-mac-lab-dist compose config
+negative profile checks (must be rejected)
+  ok   bind-all rejected: profile bind-all: REGISTRY_BIND=0.0.0.0 publishes on every interface; bind the LAN/VPN add
+  ok   bad-platform rejected: profile bad-platform: bad platform 'linux/sparc'; SERVER_PLATFORM must be one of BUILD_PLA
+  ok   server-not-built rejected: profile server-not-built: SERVER_PLATFORM must be one of BUILD_PLATFORMS
+  ok   offline-mirror rejected: profile offline-mirror: a pull-through mirror needs internet on its host; set MIRROR_ENABL
+shell scripts
+  ok   bash -n bin/img
+  ok   bash -n bin/detect-host.sh
+  ok   bash -n registry/add-user.sh
+  ok   bash -n registry/gc.sh
+  ok   bash -n registry/mkcerts.sh
+  ok   bash -n tests/validate.sh
+  ok   shellcheck (severity warning; SC2046 excluded: intentional optional flag)
+certificates
+  ok   mkcerts chain verifies
+  ok   CA key kept out of the mounted tls/ dir
+  ok   CA is name-constrained
+detect-host.sh
+  ok   this machine: HOST_OS=linux HOST_ARCH=amd64 DOCKER_SERVER=29.8.1 
+  ok   linux container: HOST_OS=linux HOST_ARCH=amd64 DISTRO=debian-13 DOCKER_CLIENT=absent 
+host-agnostic templates
+  ok   check-agnostic: OK (no host paths, lab names or private IPs in bin/ registry/ server/ examples/ Makefile README)
+
+validate: ALL OK
+rc=0

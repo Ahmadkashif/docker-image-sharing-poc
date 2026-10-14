@@ -1,0 +1,10 @@
+# Linux-host variant of Dockerfile.cross: same cross-compile stage, but the TARGET stage has no RUN, so linux/arm64
+# builds on an amd64 host need no QEMU/binfmt (the original alpine stage runs `adduser` as the target arch).
+ARG GO_VERSION=1.27.1
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+ARG TARGETOS TARGETARCH
+WORKDIR /src
+COPY go.mod *.go ./
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags "-s -w" -o /out/app .
+FROM gcr.io/distroless/static-debian13:nonroot
+COPY --from=build /out/app /usr/local/bin/app

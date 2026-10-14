@@ -1,0 +1,16 @@
+# img login (template fix F4) from the build host 2026-10-14T18:56:43+05:00
+$ docker login -u ci-push --password-stdin zot.vmlab:5443   # what the README said first
+Error response from daemon: Get "https://zot.vmlab:5443/v2/": dial tcp: lookup zot.vmlab on <host resolver>: no such host
+$ bin/img -p verify-linux-vm-lab login ci-push < <password>
+Unable to find image 'ghcr.io/oras-project/oras:v1.3.4' locally
+v1.3.4: Pulling from oras-project/oras
+Digest: sha256:f7bc056d54d97baa399414ed5048ecc67c3371b750d4bbce1d871827a5758179
+Status: Downloaded newer image for ghcr.io/oras-project/oras:v1.3.4
+Login Succeeded
+img: stored credentials for zot.vmlab:5443 (<repo>/lab/.host/docker-config/config.json) — no dockerd involved
+$ bin/img -p verify-linux-vm-lab login ci-push < wrong-password
+Error response from registry: GET "https://zot.vmlab:5443/v2/": response status code 401: Unauthorized
+img: login to zot.vmlab:5443 as ci-push failed
+rc=1
+config.json keys: {'auths': ['zot.vmlab:5443']}
+-rw-------

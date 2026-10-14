@@ -1,0 +1,17 @@
+# Q4b containerd-snapshotter switch on an EXISTING classic-store Engine (srv-classic VM only) 2026-10-14T19:09:02+05:00
+== BEFORE (classic overlay2)
+driver=overlay2
+busybox:1.37.0 30ecbe150909
+ctr pingboard Up 3 seconds (health: starting)
+{"features":{"containerd-snapshotter":false}}
+== apply the RENDERED server/daemon.json (features.containerd-snapshotter=true) + restart dockerd
+== AFTER (containerd store)
+driver=overlayfs [["driver-type","io.containerd.snapshotter.v1"]]
+images:
+containers:
+old data still on disk: (deploy has no sudo)
+old data still on disk: 18M in /var/lib/docker/overlay2
+== revert to the classic store (restore the previous daemon.json) + restart
+driver=overlay2
+busybox:1.37.0 30ecbe150909
+ctr pingboard Up 4 seconds (health: starting)

@@ -1,0 +1,88 @@
+# Q4 save/load matrix on REAL Engine 29.9 servers: srv-classic (overlay2) vs srv-cstore (containerd store) 2026-10-14T19:07:35+05:00
+# (first attempt had harness bugs: no clean store between loads, regctl mount; see .first-attempt.log)
+saving host: this Linux build box, amd64, Engine 29.8.1, containerd store; image pingboard-lab:1.0.1 (amd64+arm64, --load)
+all.tar = docker save (all platforms); amd64.tar = docker save --platform linux/amd64; oci.tar = img build TRANSPORT=oci-archive (buildx type=oci);
+regctl-amd64.tar = regctl image export --platform linux/amd64 <ref@digest>
+all-platform save manifest.json (legacy list classic stores read): 1 entry; RepoTags [['pingboard-lab:1.0.1']]; index.json manifests: 1
+regctl export rc=1
+    7026688 <tmp>
+    3960320 <tmp>
+    8335360 <tmp>
+          0 <tmp>
+================= srv-classic (overlay2 Engine 29.9.0) — store emptied before each load
+--- docker load < all.tar
+    Loaded image: pingboard-lab:1.0.1
+    image pingboard-lab:1.0.1 arch=linux/amd64
+    run: "goarch":"amd64"
+--- docker load < amd64.tar
+    Loaded image: pingboard-lab:1.0.1
+    image pingboard-lab:1.0.1 arch=linux/amd64
+    run: "goarch":"amd64"
+--- docker load < oci.tar
+    invalid archive: does not contain a manifest.json
+--- docker load < regctl-amd64.tar
+    invalid archive: does not contain a manifest.json
+================= srv-cstore (overlayfs Engine 29.9.0) — store emptied before each load
+--- docker load < all.tar
+    Loaded image: pingboard-lab:1.0.1
+    image pingboard-lab:1.0.1 arch=linux/amd64
+      tree: ├─ linux/amd64        d6a3e8cf779a       16.9MB         3.94MB        
+      tree: └─ linux/arm64        c2d9f0be197f       3.65MB         3.65MB        
+    run: "goarch":"amd64"
+--- docker load < amd64.tar
+    Loaded image: pingboard-lab:1.0.1
+    image pingboard-lab:1.0.1 arch=linux/amd64
+      tree: └─ linux/amd64        d6a3e8cf779a       16.9MB         3.94MB        
+    run: "goarch":"amd64"
+--- docker load < oci.tar
+    Loaded image: zot.vmlab:5443/team/pingboard:1.0.1
+    image zot.vmlab:5443/team/pingboard:1.0.1 arch=linux/amd64
+      tree: ├─ linux/amd64                        1a7f142723c1       16.9MB         3.94MB        
+      tree: └─ linux/arm64                        b759ec691461       3.65MB         3.65MB        
+    run: "goarch":"amd64"
+--- docker load < regctl-amd64.tar
+    unrecognized image format
+================= srv-cstore: single-platform pull, then save WITHOUT / WITH --platform
+docker: 'docker pull' requires 1 argument
+
+Usage:  docker pull [OPTIONS] NAME[:TAG|@DIGEST]
+
+Run 'docker pull --help' for more information
+$ docker save <ref@digest>
+Error response from daemon: No such image: dist/pingboard-1.0.1.oci.tar:latest
+  save_rc=1
+$ docker save --platform linux/amd64 <ref@digest>
+Error response from daemon: No such image: dist/pingboard-1.0.1.oci.tar:latest
+  save_with_platform_rc=1
+================= RE-RUN of the two rows above that failed for a harness reason ($SIGNED pointed at the oci-archive line
+  because 'img build' with TRANSPORT=oci-archive overwrote build/<p>/last/pingboard.ref) 2026-10-14T19:08:22+05:00
+regctl-amd64.tar = regctl image export --platform linux/amd64 zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> 3957760 bytes
+--- srv-classic: docker load < regctl-amd64.tar
+    Loaded image: zot.vmlab:5443/team/pingboard:1.0.1
+    image zot.vmlab:5443/team/pingboard:1.0.1 arch=linux/amd64
+    run: "goarch":"amd64"
+--- srv-cstore: docker load < regctl-amd64.tar
+    Loaded image: zot.vmlab:5443/team/pingboard:1.0.1@sha256:1a7f142723c1d35ec14214ca28790f0b3e8cfe6bd6f07209909d750769f7e0a8
+Error response from daemon: No such image: zot.vmlab:5443/team/pingboard:1.0.1
+    image zot.vmlab:5443/team/pingboard:1.0.1 arch=
+    run: "goarch":"amd64"
+--- srv-cstore: single-platform pull, then save WITHOUT / WITH --platform
+  tree: ├─ linux/amd64                                                                                          1a7f142723c1       16.9MB         3.94MB        
+  tree: └─ linux/arm64                                                                                          b759ec691461           0B             0B        
+$ docker save <ref@digest>
+  save_rc=0
+$ docker save --platform linux/amd64 <ref@digest>
+  save_with_platform_rc=0
+--- srv-classic: single-platform pull, then save WITHOUT / WITH --platform
+$ docker save <ref@digest>
+  save_rc=0
+$ docker save --platform linux/amd64 <ref@digest>
+  save_with_platform_rc=0
+25
+[{"Config":"blobs/sha256/a2ab6603b966028368b83e939c88dbaf575de5efd1a3f32000ee848894bf7994","RepoTags":null,"Layers":["blobs/sha256/2cc7ee286bf3a9e6af5f71756d7fc8e22e23ce65fec9047d774511ffcef79fa8","blobs/sha256/c172f21841dff4c8cf45cde46589c1c2616cefe7e819965e92e6d3475c428aa0","blobs/sha256/218cf840d
+Loaded image ID: sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+Unable to find image 'zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf' locally
+zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf: Pulling from team/pingboard
+Digest: sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+Status: Downloaded newer image for zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+run_rc=1

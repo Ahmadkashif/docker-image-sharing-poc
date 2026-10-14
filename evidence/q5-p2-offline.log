@@ -1,0 +1,69 @@
+# Q5 P2: real no-internet server VM (srv-offline), LAN path to the registry only 2026-10-14T19:09:45+05:00
+$ vmlab net srv-offline lan-only    # nftables in the lab container's netns: forward only to the registry network tcp/5443-5444
+srv-offline (10.77.0.13) egress policy: lan-only
+== egress proof from srv-offline
+  https://registry-1.docker.io/v2/     http=000
+  https://ghcr.io/v2/                  http=000
+  https://download.docker.com/         http=000
+  https://1.1.1.1/                     http=000
+  https://zot.vmlab:5443/v2/           http=401
+  (no local images: cosign must come from the registry)
+Login Succeeded
+$ bin/img -p verify-linux-vm-lab mirror-tools
+==> mirror ghcr.io/sigstore/cosign/cosign:v3.1.3 -> zot.vmlab:5443/tools/cosign:v3.1.3
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest list to image destination
+==> mirror anchore/grype:v0.119.0 -> zot.vmlab:5443/tools/grype:v0.119.0
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest list to image destination
+==> mirror quay.io/skopeo/stable:v1.22.3 -> zot.vmlab:5443/tools/skopeo:v1.22.3
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest list to image destination
+==> mirror ghcr.io/regclient/regctl:v0.11.6 -> zot.vmlab:5443/tools/regctl:v0.11.6
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest to image destination
+Writing manifest list to image destination
+$ bin/img -p verify-linux-vm-lab --set SERVER_SSH=deploy@srv-offline --set TOOLS_FROM_REGISTRY=yes --set SERVER_INTERNET=no doctor
+==> server deploy@srv-offline
+role=server arch=amd64 docker=29.9.0(amd64, containerd-store=yes) buildx=0.38.0 registry=zot.vmlab:5443:401
+
+  WARN  rootful docker: members of the docker group are root-equivalent
+RESULT=OK
+$ bin/img -p verify-linux-vm-lab --set SERVER_SSH=deploy@srv-offline --set TOOLS_FROM_REGISTRY=yes deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -- --name pingboard -p 8080:8080
+==> deploy zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf -> deploy@srv-offline (linux/amd64)
+Unable to find image 'zot.vmlab:5443/tools/cosign:v3.1.3' locally
+Digest: sha256:9e5c2f2edc34351160407ca3416c61855bdf9403c3c5936e0f0be7fc261611b8
+WARNING: Skipping tlog verification is an insecure practice that lacks transparency and auditability verification for the signature.
+
+Verification for zot.vmlab:5443/team/pingboard@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+server: signature verified for zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+server: pulled linux/amd64 zot.vmlab:5443/team/pingboard:1.0.1@sha256:b6e21f82dd9ead2d7a09a39cc374bad77da682124b773d46cbd244e0df145abf
+a3fde865388f1dfbd71efcf2a1fa644449895e40b210f1ef6babb28ea7d622f3
+pingboard zot.vmlab:5443/team/pingboard:1.0.1 Up 8 seconds (health: starting)
+zot.vmlab:5443/team/pingboard:<none>
+zot.vmlab:5443/tools/cosign:v3.1.3
+{"app":"pingboard","version":"1.0.1","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"a3fde865388f","uptime":"9s","hits":1}
+
+== nft counters (dropped forward packets from srv-offline)
+		ip saddr @lanonly counter packets 53 bytes 3180 drop

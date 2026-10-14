@@ -1,0 +1,40 @@
+# Q2 robot rights, from a REAL server VM (srv-cstore: Ubuntu 24.04, Engine 29.9.0) 2026-10-14T18:54:44+05:00
+== zot.vmlab:5443: docker login as the read-only server robot (server-pull)
+
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+$ docker push zot.vmlab:5443/team/robot-test:1 (as server-pull)
+error from registry: requested access to the resource is denied
+push_rc=1
+== dist.vmlab:5443: docker login as the read-only server robot (server-pull)
+
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+$ docker push dist.vmlab:5443/team/robot-test:1 (as server-pull)
+dist.vmlab:5443/team/robot-test:1
+
+ Info -> Not all multiplatform-content is present and only the available single-platform image was pushed
+         sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e -> sha256:66a6306db78bf2dbf3487f293aa8d6990d8e506fdffab9cc43fe422becf886e4
+push_rc=0
+== add a user WITHOUT restarting either registry
+$ registry/add-user.sh build/verify-linux-vm-lab/auth late-bot <pw>; docker login zot.vmlab:5443 -u late-bot
+
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+registry container StartedAt before=2026-10-14T13:53:16.052271792Z after=2026-10-14T13:53:16.052271792Z (no restart)
+$ registry/add-user.sh build/verify-linux-vm-lab-dist/auth late-bot <pw>; docker login dist.vmlab:5443 -u late-bot
+
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+registry container StartedAt before=2026-10-14T13:53:17.827565126Z after=2026-10-14T13:53:17.827565126Z (no restart)
+== zot retention stays in dry-run
+9:    "retention": {
+10-      "dryRun": true,
+11-      "delay": "24h",
+12-      "policies": [
+{"time":"2026-10-14T13:53:16.185183377Z","level":"info","message":"configuration settings","params":{"distSpecVersion":"1.1.1","GoVersion":"go1.26.8","Commit":"v2.1.21-6429ce645b13f5a72275d793ae42df51739bb0ca","ReleaseTag":"v2.1.21","BinaryType":"-events-imagetrust-lint-metrics-mgmt-profile-scrub-se …[truncated; Retention DryRun:true shown above]
+{"time":"2026-10-14T13:54:12.643553283Z","level":"info","message":"loaded new configuration settings","reloaded params":{"distSpecVersion":"1.1.1","GoVersion":"go1.26.8","Commit":"v2.1.21-6429ce645b13f5a72275d793ae42df51739bb0ca","ReleaseTag":"v2.1.21","BinaryType":"-events-imagetrust-lint-metrics-m …[truncated; Retention DryRun:true shown above]

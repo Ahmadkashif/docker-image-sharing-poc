@@ -1,0 +1,44 @@
+# Q8 remote BuildKit over SSH on a real server VM + docker --context (deploy user in the docker group) 2026-10-14T19:27:26+05:00
+$ bin/img -p verify-linux-vm-lab --set BUILDER_MODE=remote --set BUILDER_NAME=img-vmlab-remote builder
+#1 [internal] booting buildkit
+#1 pulling image moby/buildkit:v0.33.1
+#1 pulling image moby/buildkit:v0.33.1 34.5s done
+#1 creating container buildx_buildkit_img-vmlab-remote0
+#1 creating container buildx_buildkit_img-vmlab-remote0 0.9s done
+#1 DONE 35.4s
+Name:          img-vmlab-remote
+Driver:        docker-container
+Name:                  img-vmlab-remote0
+Endpoint:              ssh://deploy@srv-cstore
+Platforms:             linux/amd64, linux/amd64/v2, linux/amd64/v3, linux/386
+$ bin/img -p verify-linux-vm-lab --set BUILDER_MODE=remote --set BUILDER_NAME=img-vmlab-remote release ../poc-app/pingboard pingboard 1.0.3-remote
+#23 DONE 1.2s
+#25 exporting to image
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78
+#25 exporting to image
+#25 pushing manifest for zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78 2.0s done
+#25 DONE 7.2s
+#26 DONE 4.0s
+#27 DONE 0.2s
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78 [linux/amd64] fail-on=high only-fixed=yes
+==> scan registry:zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78 [linux/arm64] fail-on=high only-fixed=yes
+==> scan gate passed
+==> cosign sign (recursive: index + every platform manifest) zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78
+==> cosign verify zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78
+==> signature OK
+zot.vmlab:5443/team/pingboard:1.0.3-remote@sha256:d753835c2faf6b787dc727b326195fa7559bc4b5e708797f9960b65fd271dd78
+builder containers on srv-cstore:
+buildx_buildkit_img-vmlab-remote0 moby/buildkit:v0.33.1 Up About a minute
+== docker --context (never export DOCKER_HOST)
+$ docker context create img-srv-cstore --docker host=ssh://deploy@srv-cstore
+img-srv-cstore
+Successfully created context "img-srv-cstore"
+$ docker --context img-srv-cstore build -t pingboard:ctx --build-arg VERSION=ctx ../poc-app/pingboard
+2026/10/14 19:29:14 http2: server: error reading preface from client dummy-1: read |0: file already closed
+sha256:8675e346f74da8b956baa5a8918654683e60ed9bfdb1cdc460b1fd3038634967
+$ docker --context img-srv-cstore run -d --name pingboard-ctx -p 8082:8080 pingboard:ctx
+a2d1f742068d88109b46ab0ad068bb7a4a01b6260abccd565d8453d156129ef0
+{"app":"pingboard","version":"ctx","commit":"none","goos":"linux","goarch":"amd64","go":"go1.27.2","host":"a2d1f742068d","uptime":"4s","hits":1}
+
+image on the build host? no — built and stored only on the server
+DOCKER_HOST in this shell: ''  current context: default

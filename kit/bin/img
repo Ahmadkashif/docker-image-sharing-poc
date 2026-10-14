@@ -1,0 +1,405 @@
+#!/usr/bin/env bash
+# img — build, publish, move and verify container images per profile (Mac or Linux build machine -> Linux server).
+#
+#   bin/img -p <profile> [--set KEY=VALUE]... <command> [args]
+#
+# Setup      render | doctor | login <user> | keygen | builder [rm] | mirror-tools | bundle-tools <out.tar.zst>
+# Build      build <context> <name> <tag> [-- buildx args]   (TRANSPORT=registry: push; ssh-load: --load; oci-archive: dist/*.oci.tar)
+#            scan <ref|oci-archive:path|docker:ref>           (grype gate: fails at >= SCAN_FAIL_ON, every BUILD_PLATFORM)
+#            sign <ref@digest> | verify <ref@digest>          (cosign, key-based, no public transparency log)
+#            release <context> <name> <tag>                   (build + scan + sign + verify; prints ref@digest)
+# Move       deploy <ref@digest> [-- docker run args]         (server: cosign verify, pull --platform SERVER_PLATFORM, [run])
+#            ship-ssh <local-image>                           (docker save --platform | zstd | ssh docker load)
+#            bundle <archive>                                 (SHA256SUMS + cosign sign-blob, for sneakernet)
+#            import <archive> <ref>                           (inside: sha256 + verify-blob, regctl copy incl. referrers)
+#            export <ref> <out.tar>                           (registry -> OCI layout tar incl. signatures/attestations)
+#
+# Profiles live in profiles/*.env and are rendered to build/<profile>/ (bin/render.py). --set overrides non-derived
+# keys at run time (e.g. SERVER_SSH). Registry credentials: IMG_REGISTRY_USER/IMG_REGISTRY_PASSWORD, else your
+# docker login (credential helper or config.json). They are handed to tool containers through a 0600 temp file that
+# is deleted on exit. Needs: bash, docker (buildx), python3 (JSON), ssh; zstd optional.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(dirname "$HERE")"
+die() { echo "img: $*" >&2; exit 1; }
+log() { echo "==> $*" >&2; }
+
+PROFILE=""; SETS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -p|--profile) PROFILE="${2:?}"; shift 2;;
+    --set) SETS+=("${2:?}"); shift 2;;
+    -h|--help|help) sed -n '2,21p' "$0"; exit 0;;
+    *) break;;
+  esac
+done
+CMD="${1:-}"; [ -n "$CMD" ] || { sed -n '2,21p' "$0"; exit 2; }; shift
+PROFILE="${PROFILE:-${IMG_PROFILE:-}}"; [ -n "$PROFILE" ] || die "no profile (-p <name> or IMG_PROFILE)"
+
+# ---------------------------------------------------------------------------------------------------- profile ---
+BUILD_ROOT="${IMG_BUILD_DIR:-$ROOT/build}"
+case "$PROFILE" in */*|*.env) PNAME="$(basename "$PROFILE" .env)";; *) PNAME="$PROFILE";; esac
+PENV="$BUILD_ROOT/$PNAME/profile.env"
+if [ "$CMD" = render ] || [ ! -f "$PENV" ]; then python3 "$HERE/render.py" "$PROFILE" >&2; fi
+[ "$CMD" = render ] && exit 0
+# shellcheck disable=SC1090
+. "$PENV"
+for kv in ${SETS[@]+"${SETS[@]}"}; do
+  k="${kv%%=*}"; case "$k" in REGISTRY|REGISTRY_HOST|REGISTRY_PORT|IMAGE_PREFIX|REGISTRY_NAMESPACE) die "--set $k: derived key, re-render the profile instead";; esac
+  eval "$k=\"\${kv#*=}\""
+done
+SERVER_ARCH="${SERVER_PLATFORM#*/}"; SERVER_ARCH="${SERVER_ARCH%%/*}"
+abspath() { case "$1" in "") echo "";; /*) echo "$1";; *) echo "$PROFILE_DIR/$1";; esac; }
+CA="$(abspath "${REGISTRY_CA_FILE:-}")"
+if [ -n "$CA" ] && [ ! -f "$CA" ]; then
+  # Only commands that talk to the registry need its CA. With TRANSPORT=oci-archive (P3) the registry is the INSIDE
+  # one, whose CA does not exist outside: build/scan/bundle/keygen must still work there.
+  case "$CMD:$TRANSPORT" in
+    keygen:*|bundle:*|bundle-tools:*|build:oci-archive|build:ssh-load|builder:oci-archive|builder:ssh-load|scan:oci-archive|scan:ssh-load)
+      log "REGISTRY_CA_FILE $CA not present here: fine for '$CMD' with TRANSPORT=$TRANSPORT (no registry involved)"; CA="" ;;
+    *) die "REGISTRY_CA_FILE $CA missing (run registry/mkcerts.sh or copy the company CA there)" ;;
+  esac
+fi
+KEY="$(abspath "$COSIGN_KEY")"; PUB="$(abspath "$COSIGN_PUB")"
+GRYPE_DB_VOLUME="${IMG_GRYPE_DB_VOLUME:-img-grype-db}"
+
+TMPD="$(mktemp -d "${TMPDIR:-/tmp}/img.XXXXXX")"; chmod 700 "$TMPD"
+cleanup() { rm -rf "$TMPD"; }; trap cleanup EXIT
+if [ -n "$CA" ]; then   # CA laid out for tool containers: /certs/ca.crt and /certs/<registry>/ca.crt (docker certs.d style)
+  mkdir -p "$TMPD/certs/$REGISTRY"; cp "$CA" "$TMPD/certs/ca.crt"; cp "$CA" "$TMPD/certs/$REGISTRY/ca.crt"
+fi
+
+sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+ssh_srv() { [ -n "${SERVER_SSH:-}" ] || die "profile has no SERVER_SSH"
+  if [ "${SERVER_SSH_PORT:-22}" = 22 ]; then ssh -T "$SERVER_SSH" "$@"; else ssh -T -p "$SERVER_SSH_PORT" "$SERVER_SSH" "$@"; fi; }
+ssh_url() { if [ "${SERVER_SSH_PORT:-22}" = 22 ]; then echo "ssh://$SERVER_SSH"; else echo "ssh://$SERVER_SSH:$SERVER_SSH_PORT"; fi; }
+
+# ------------------------------------------------------------------------------------------------ credentials ---
+# Write $TMPD/auth/config.json = {"auths":{"<registry>":{"auth":"b64(user:pass)"}}} for tool containers.
+authfile() {
+  local reg="${1:-$REGISTRY}"; mkdir -p "$TMPD/auth"; chmod 700 "$TMPD/auth"
+  REG="$reg" python3 - "$TMPD/auth/config.json" <<'PY'
+import base64, json, os, subprocess, sys
+reg = os.environ["REG"]; out = sys.argv[1]
+user, pw = os.environ.get("IMG_REGISTRY_USER"), os.environ.get("IMG_REGISTRY_PASSWORD")
+if not (user and pw):
+    cfgdir = os.environ.get("DOCKER_CONFIG") or os.path.expanduser("~/.docker")
+    try:
+        cfg = json.load(open(os.path.join(cfgdir, "config.json")))
+    except Exception:
+        cfg = {}
+    helper = (cfg.get("credHelpers") or {}).get(reg) or cfg.get("credsStore")
+    entry = (cfg.get("auths") or {}).get(reg) or {}
+    if entry.get("auth"):
+        user, _, pw = base64.b64decode(entry["auth"]).decode().partition(":")
+    elif helper:
+        try:
+            r = subprocess.run(["docker-credential-" + helper, "get"], input=reg.encode(), capture_output=True, check=True)
+            d = json.loads(r.stdout); user, pw = d.get("Username"), d.get("Secret")
+        except Exception:
+            pass
+auths = {}
+if user and pw:
+    auths[reg] = {"auth": base64.b64encode(f"{user}:{pw}".encode()).decode()}
+fd = os.open(out, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w") as f:
+    json.dump({"auths": auths}, f)
+print("found" if auths else "none", file=sys.stderr)
+PY
+}
+
+# Run a pinned tool image with auth, CA and the current directory mounted. Args: IMAGE [docker-run opts --] tool-args
+# Runs as the image's user; commands that WRITE into the working directory, or that run as a non-root image user
+# (cosign = 65532, regctl) pass --user "$ME": on Linux the 0600 authfile and cosign.key are only readable by you.
+tool() {
+  local image="$1"; shift; local opts=()
+  while [ $# -gt 0 ] && [ "$1" != -- ]; do opts+=("$1"); shift; done; [ "${1:-}" = -- ] && shift
+  [ -f "$TMPD/auth/config.json" ] || authfile >/dev/null 2>&1
+  local ca=(); [ -n "$CA" ] && ca=(-v "$TMPD/certs:/certs:ro" -e SSL_CERT_DIR=/etc/ssl/certs:/certs)
+  docker run --rm -i ${TOOLS_DOCKER_NETWORK:+--network "$TOOLS_DOCKER_NETWORK"} --tmpfs /tmp:rw,mode=1777 \
+    -e HOME=/tmp -e DOCKER_CONFIG=/auth -v "$TMPD/auth:/auth:ro" \
+    ${ca[@]+"${ca[@]}"} -v "$PWD:/work" -w /work ${opts[@]+"${opts[@]}"} "$image" "$@"
+}
+ME="$(id -u):$(id -g)"
+cacert_flag() { [ -n "$CA" ] && echo "--registry-cacert=/certs/ca.crt" || true; }
+
+# --------------------------------------------------------------------------------------------------- commands ---
+cmd_doctor() {
+  preamble() { # the profile as shell assignments (+ run-time --set overrides), prepended to detect-host.sh
+    if [ "$1" = local ]; then cat "$PENV"; else grep -v '^PROFILE_DIR=' "$PENV"; fi
+    for kv in ${SETS[@]+"${SETS[@]}"}; do printf '%s=%q\n' "${kv%%=*}" "${kv#*=}"; done
+    printf 'SERVER_ARCH=%q\n' "$SERVER_ARCH"; cat "$HERE/detect-host.sh"
+  }
+  log "this machine"
+  preamble local | bash -s -- --check - --role client ${CA:+--ca "$CA"} || true
+  if [ -n "${SERVER_SSH:-}" ]; then
+    log "server $SERVER_SSH"
+    preamble remote | ssh_srv bash -s -- --check - --role server || true
+  fi
+}
+
+# Daemon-free registry login (password on stdin). `docker login` asks dockerd to contact the registry, so dockerd must
+# resolve the name and trust the CA (/etc/docker/certs.d = root on Linux). A build machine never needs that: buildx
+# pushes from the builder (CA via buildkitd.toml) and tools get creds via authfile(). So: check the credentials with
+# oras in a tool container (CA + TOOLS_DOCKER_NETWORK), then store them like docker login would (credential helper
+# if one is configured, else a 0600 config.json in $DOCKER_CONFIG).
+cmd_login() {
+  local user="${1:?usage: img login <user>  (password on stdin)}" pw; IFS= read -r pw || true; [ -n "$pw" ] || die "password on stdin"
+  local ca=(); [ -n "$CA" ] && ca=(--ca-file /certs/ca.crt)
+  printf '%s' "$pw" | docker run --rm -i ${TOOLS_DOCKER_NETWORK:+--network "$TOOLS_DOCKER_NETWORK"} --tmpfs /tmp:rw,mode=1777 -e HOME=/tmp \
+    ${CA:+-v "$TMPD/certs:/certs:ro"} "$ORAS_IMAGE" login ${ca[@]+"${ca[@]}"} --registry-config /tmp/c.json -u "$user" --password-stdin "$REGISTRY" >&2 \
+    || die "login to $REGISTRY as $user failed"
+  REG="$REGISTRY" U="$user" P="$pw" python3 - <<'PY'
+import base64, json, os, subprocess
+d = os.environ.get("DOCKER_CONFIG") or os.path.expanduser("~/.docker"); f = os.path.join(d, "config.json")
+os.makedirs(d, mode=0o700, exist_ok=True)
+try: cfg = json.load(open(f))
+except Exception: cfg = {}
+reg, u, p = os.environ["REG"], os.environ["U"], os.environ["P"]
+helper = (cfg.get("credHelpers") or {}).get(reg) or cfg.get("credsStore")
+if helper:
+    subprocess.run(["docker-credential-" + helper, "store"], input=json.dumps({"ServerURL": reg, "Username": u, "Secret": p}).encode(), check=True)
+    cfg.setdefault("auths", {})[reg] = {}
+else:
+    cfg.setdefault("auths", {})[reg] = {"auth": base64.b64encode(f"{u}:{p}".encode()).decode()}
+fd = os.open(f + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w") as o: json.dump(cfg, o, indent=2)
+os.replace(f + ".tmp", f)
+print(f"img: stored credentials for {reg} ({'helper ' + helper if helper else f}) — no dockerd involved")
+PY
+}
+
+cmd_keygen() {
+  mkdir -p "$(dirname "$KEY")"; [ -f "$KEY" ] && die "$KEY exists"
+  [ -n "${COSIGN_PASSWORD:-}" ] || die "set COSIGN_PASSWORD (store it in your secret manager)"
+  ( cd "$(dirname "$KEY")" && docker run --rm --user "$(id -u):$(id -g)" -e COSIGN_PASSWORD -v "$PWD:/k" -w /k "$COSIGN_IMAGE" generate-key-pair >/dev/null )
+  chmod 600 "$KEY"; log "cosign keys: $KEY (secret) $PUB (distribute)"
+}
+
+cmd_builder() {
+  if [ "${1:-}" = rm ]; then docker buildx rm "$BUILDER_NAME" 2>/dev/null || true; return; fi
+  docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1 && { log "builder $BUILDER_NAME exists"; docker buildx inspect "$BUILDER_NAME" | grep -E '^(Name|Driver|Endpoint|Platforms):' ; return; }
+  local bkcfg="$PROFILE_DIR/buildkitd.toml"
+  if [ -z "$CA" ]; then  # CA not present here (oci-archive outside): drop CA entries, keep mirrors
+    bkcfg="$TMPD/buildkitd.toml"
+    python3 - "$PROFILE_DIR/buildkitd.toml" "$bkcfg" <<'PY'
+import os, re, sys
+out, sec = [], None
+for line in open(sys.argv[1]):
+    m = re.match(r'\s*ca = \["(.*)"\]', line)
+    if m and not os.path.isfile(m.group(1)):
+        continue
+    out.append(line)
+txt = re.sub(r'^\[registry\."[^"]+"\]\n(?=\[|\Z)', "", "".join(out), flags=re.M)
+open(sys.argv[2], "w").write(txt)
+PY
+  fi
+  local common=(--driver docker-container --driver-opt "image=$BUILDKIT_IMAGE" --buildkitd-config "$bkcfg")
+  local o; local lopts=() ropts=()
+  for o in $(echo "${BUILDER_DRIVER_OPTS:-}" | tr ',' ' '); do lopts+=(--driver-opt "$o"); done
+  for o in $(echo "${BUILDER_REMOTE_DRIVER_OPTS:-}" | tr ',' ' '); do ropts+=(--driver-opt "$o"); done
+  case "$BUILDER_MODE" in
+    local)  docker buildx create --name "$BUILDER_NAME" "${common[@]}" ${lopts[@]+"${lopts[@]}"} --bootstrap >/dev/null ;;
+    remote) docker buildx create --name "$BUILDER_NAME" "${common[@]}" ${ropts[@]+"${ropts[@]}"} --bootstrap "$(ssh_url)" >/dev/null ;;
+    multinode)
+      local here; here="linux/$(docker version --format '{{.Server.Arch}}')"
+      docker buildx create --name "$BUILDER_NAME" --node "${BUILDER_NAME}-local" --platform "$here" "${common[@]}" ${lopts[@]+"${lopts[@]}"} >/dev/null
+      docker buildx create --append --name "$BUILDER_NAME" --node "${BUILDER_NAME}-server" --platform "$SERVER_PLATFORM" "${common[@]}" ${ropts[@]+"${ropts[@]}"} "$(ssh_url)" >/dev/null
+      docker buildx inspect --bootstrap "$BUILDER_NAME" >/dev/null ;;
+  esac
+  docker buildx inspect "$BUILDER_NAME" | grep -E '^(Name|Driver|Endpoint|Platforms):'
+}
+
+cmd_build() {
+  local ctx="${1:?context}" name="${2:?name}" tag="${3:?tag}"; shift 3; [ "${1:-}" = -- ] && shift
+  docker buildx inspect "$BUILDER_NAME" >/dev/null 2>&1 || cmd_builder >/dev/null
+  local ref="$IMAGE_PREFIX/$name:$tag" md="$TMPD/metadata.json" plats="$BUILD_PLATFORMS" out=() cache=()
+  if [ -z "${SOURCE_DATE_EPOCH:-}" ] && git -C "$ctx" rev-parse >/dev/null 2>&1; then
+    SOURCE_DATE_EPOCH="$(git -C "$ctx" log -1 --pretty=%ct 2>/dev/null || true)"; export SOURCE_DATE_EPOCH
+  fi
+  local ts=""; [ -n "${SOURCE_DATE_EPOCH:-}" ] && ts=",rewrite-timestamp=true"
+  case "$TRANSPORT" in
+    registry)    out=(--output "type=image,name=$ref,push=true,oci-mediatypes=true$ts") ;;
+    oci-archive) mkdir -p dist; out=(--output "type=oci,dest=dist/$name-$tag.oci.tar,name=$ref$ts") ;;
+    ssh-load)    plats="$SERVER_PLATFORM"; out=(--output "type=docker,name=$name:$tag") ;;
+  esac
+  case "$CACHE" in
+    registry) cache=(--cache-from "type=registry,ref=$IMAGE_PREFIX/$name:buildcache"
+                     --cache-to "type=registry,ref=$IMAGE_PREFIX/$name:buildcache,mode=max,image-manifest=true,oci-mediatypes=true") ;;
+    local)    cache=(--cache-from "type=local,src=$PROFILE_DIR/cache/$name" --cache-to "type=local,dest=$PROFILE_DIR/cache/$name,mode=max") ;;
+  esac
+  log "build $ref for $plats (builder $BUILDER_NAME, transport $TRANSPORT${SOURCE_DATE_EPOCH:+, SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH})"
+  docker buildx build --builder "$BUILDER_NAME" --platform "$plats" --provenance="$PROVENANCE" --sbom="$SBOM" \
+    ${cache[@]+"${cache[@]}"} "${out[@]}" --metadata-file "$md" "$@" "$ctx" >&2
+  local digest; digest="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("containerimage.digest",""))' "$md")"
+  mkdir -p "$PROFILE_DIR/last"
+  case "$TRANSPORT" in
+    registry)    echo "$ref@$digest" | tee "$PROFILE_DIR/last/$name.ref" ;;
+    oci-archive) echo "dist/$name-$tag.oci.tar $digest" | tee "$PROFILE_DIR/last/$name.ref" ;;
+    ssh-load)    echo "$name:$tag" | tee "$PROFILE_DIR/last/$name.ref" ;;
+  esac
+}
+
+cmd_scan() {
+  local ref="${1:?ref}" src p rc=0 fail=()
+  [ -n "${SCAN_FAIL_ON:-}" ] && fail=(--fail-on "$SCAN_FAIL_ON")
+  case "$ref" in oci-archive:*|docker-archive:*|docker:*|registry:*) src="$ref";; *) src="registry:$ref";; esac
+  local ga=(); [ -n "$CA" ] && ga=(-e GRYPE_REGISTRY_CA_CERT=/certs/ca.crt)
+  for p in $(echo "$BUILD_PLATFORMS" | tr ',' ' '); do
+    [ "$TRANSPORT" = ssh-load ] && [ "$p" != "$SERVER_PLATFORM" ] && continue
+    log "scan $src [$p] fail-on=${SCAN_FAIL_ON:-off} only-fixed=${SCAN_ONLY_FIXED:-yes}"
+    local mounts=(-v "$GRYPE_DB_VOLUME:/tmp/.cache/grype" ${ga[@]+"${ga[@]}"})
+    case "$src" in docker:*) mounts+=(-v /var/run/docker.sock:/var/run/docker.sock);; esac
+    tool "$GRYPE_IMAGE" "${mounts[@]}" -- "$src" --platform "$p" ${fail[@]+"${fail[@]}"} -o table \
+      --only-fixed="$([ "${SCAN_ONLY_FIXED:-yes}" = yes ] && echo true || echo false)" >&2 || rc=$?
+    [ "$rc" = 0 ] || { log "SCAN GATE FAILED for $p (exit $rc)"; return "$rc"; }
+  done
+  log "scan gate passed"
+}
+
+cmd_sign() {
+  local ref="${1:?ref@digest}"; case "$ref" in *@sha256:*) ;; *) die "sign by digest, not tag ($ref)";; esac
+  [ -f "$KEY" ] || die "no cosign key at $KEY (img keygen)"; [ -n "${COSIGN_PASSWORD:-}" ] || die "set COSIGN_PASSWORD"
+  log "cosign sign (recursive: index + every platform manifest) $ref"
+  tool "$COSIGN_IMAGE" --user "$ME" -e COSIGN_PASSWORD -v "$(dirname "$KEY"):/keys:ro" -- \
+    sign --yes --recursive --key "/keys/$(basename "$KEY")" --tlog-upload=false --use-signing-config=false $(cacert_flag) "$ref" >&2
+}
+
+cmd_verify() {
+  local ref="${1:?ref@digest}"
+  log "cosign verify $ref"
+  tool "$COSIGN_IMAGE" --user "$ME" -v "$(dirname "$PUB"):/keys:ro" -- \
+    verify --key "/keys/$(basename "$PUB")" --insecure-ignore-tlog=true $(cacert_flag) "$ref" >/dev/null
+  log "signature OK"
+}
+
+cmd_release() {
+  local ref; ref="$(cmd_build "$@" | tail -n1)"
+  [ "$TRANSPORT" = registry ] || die "release is for TRANSPORT=registry (use build + scan + bundle for $TRANSPORT)"
+  cmd_scan "$ref"
+  [ "$SIGNING" = cosign-key ] && { cmd_sign "$ref"; cmd_verify "$ref"; }
+  echo "$ref"
+}
+
+tool_name() { # ghcr.io/sigstore/cosign/cosign:v3.1.3 -> cosign:v3.1.3 ; quay.io/skopeo/stable:v1.22.3 -> skopeo:v1.22.3
+  local b="${1##*/}" p="${1%/*}"; case "${b%%:*}" in stable|latest) b="${p##*/}:${b#*:}";; esac; echo "$b"
+}
+tool_ref() { # upstream tool image -> ref the server should use
+  if [ "${TOOLS_FROM_REGISTRY:-no}" = yes ]; then echo "$REGISTRY/tools/$(tool_name "$1")"; else echo "$1"; fi
+}
+
+cmd_deploy() {
+  local ref="${1:?ref@digest}"; shift; [ "${1:-}" = -- ] && shift
+  case "$ref" in *@sha256:*) ;; *) die "deploy by digest (ref@sha256:...), got $ref";; esac
+  local cos; cos="$(tool_ref "$COSIGN_IMAGE")"; local run=""; [ $# -gt 0 ] && run="$(printf '%q ' "$@")"
+  if [ "$SIGNING" = cosign-key ] && [ "${VERIFY_ON_SERVER:-yes}" = yes ]; then
+    ssh_srv 'umask 077; mkdir -p ~/.img && cat > ~/.img/cosign.pub' < "$PUB"
+  fi
+  log "deploy $ref -> $SERVER_SSH ($SERVER_PLATFORM)"
+  ssh_srv bash -s <<EOF
+set -euo pipefail
+REF='$ref'; REG='$REGISTRY'
+if [ '$SIGNING' = cosign-key ] && [ '${VERIFY_ON_SERVER:-yes}' = yes ]; then
+  ca=(); [ -f "/etc/docker/certs.d/\$REG/ca.crt" ] && ca=(--mount "type=bind,src=/etc/docker/certs.d/\$REG/ca.crt,dst=/certs/ca.crt,readonly" -e SSL_CERT_DIR=/etc/ssl/certs:/certs)
+  cfg="\${DOCKER_CONFIG:-\$HOME/.docker}"
+  # --network host: resolve + route exactly like the dockerd that will pull (split-DNS / VPN names keep working)
+  docker run --rm --network host --user "\$(id -u):\$(id -g)" -e HOME=/tmp -e DOCKER_CONFIG=/auth -v "\$cfg:/auth:ro" \${ca[@]+"\${ca[@]}"} \
+    -v "\$HOME/.img/cosign.pub:/keys/cosign.pub:ro" '$cos' \
+    verify --key /keys/cosign.pub --insecure-ignore-tlog=true \${ca[0]:+--registry-cacert=/certs/ca.crt} "\$REF" >/dev/null
+  echo "server: signature verified for \$REF"
+fi
+docker pull -q --platform '$SERVER_PLATFORM' "\$REF" >/dev/null
+echo "server: pulled \$(docker image inspect --platform '$SERVER_PLATFORM' --format '{{.Os}}/{{.Architecture}}' "\$REF" 2>/dev/null || docker image inspect --format '{{.Os}}/{{.Architecture}}' "\$REF") \$REF"
+if [ -n "$run" ]; then docker run -d --platform '$SERVER_PLATFORM' $run "\$REF"; fi
+EOF
+}
+
+cmd_ship_ssh() {
+  local image="${1:?local image}"; local z=(cat); command -v zstd >/dev/null 2>&1 && z=(zstd -q -T0 -3 -c)
+  log "docker save --platform $SERVER_PLATFORM $image | ${z[*]} | ssh $SERVER_SSH docker load"
+  docker save --platform "$SERVER_PLATFORM" "$image" | "${z[@]}" | ssh_srv docker load
+}
+
+cmd_bundle() {
+  local a="${1:?archive}"; [ -f "$a" ] || die "no $a"
+  ( cd "$(dirname "$a")" && sha256 "$(basename "$a")" > "$(basename "$a").sha256" )
+  [ "$SIGNING" = cosign-key ] || { log "checksum only: $a.sha256"; return; }
+  log "cosign sign-blob $a (bundle: $a.sigstore.json)"
+  local ad; ad="$(cd "$(dirname "$a")" && pwd)"; local an; an="$(basename "$a")"   # archive may live outside $PWD
+  tool "$COSIGN_IMAGE" --user "$ME" -e COSIGN_PASSWORD -v "$(dirname "$KEY"):/keys:ro" -v "$ad:/blob" -- \
+    sign-blob --yes --key "/keys/$(basename "$KEY")" --tlog-upload=false --use-signing-config=false \
+    --bundle "/blob/$an.sigstore.json" "/blob/$an" >/dev/null
+  chmod 0644 "$a.sigstore.json"   # public signature material: cosign writes it 0600, unreadable for the inside operator
+  log "carry: $a  $a.sha256  $a.sigstore.json  (+ $(basename "$PUB") once, via a separate trusted channel)"
+}
+
+cmd_import() { # archive = buildx OCI tar (P3a) or `img export` tar (P3b, carries signature referrers)
+  local a="${1:?archive}" ref="${2:?dest ref}" d="$TMPD/import"
+  [ -f "$a.sha256" ] || die "no $a.sha256 next to the archive (refusing an unverified import)"
+  ( cd "$(dirname "$a")" && sha256 -c "$(basename "$a").sha256" ) >&2 || die "checksum mismatch"
+  if [ "$SIGNING" = cosign-key ]; then
+    if [ -f "$a.sigstore.json" ]; then
+      # mount the archive's directory: the archive may live outside $PWD (e.g. /media/usb), which tool() does not mount
+      local ad; ad="$(cd "$(dirname "$a")" && pwd)"; local an; an="$(basename "$a")"
+      tool "$(tool_ref "$COSIGN_IMAGE")" --user "$ME" -v "$(dirname "$PUB"):/keys:ro" -v "$ad:/blob:ro" -- \
+        verify-blob --key "/keys/$(basename "$PUB")" --insecure-ignore-tlog=true --bundle "/blob/$an.sigstore.json" "/blob/$an" >&2
+    else
+      log "no $a.sigstore.json: relying on the image signatures carried inside the archive (verify after import)"
+    fi
+  fi
+  mkdir -p "$d"; tar -xf "$a" -C "$d"
+  # the image = the index.json entry carrying a normal tag (referrers / sha256-* digest tags are carried along by --referrers)
+  local top; top="$(python3 - "$d/index.json" <<'PY'
+import json, sys
+ms = json.load(open(sys.argv[1]))["manifests"]
+def tag(m): return (m.get("annotations") or {}).get("org.opencontainers.image.ref.name", "")
+imgs = [m for m in ms if not m.get("artifactType") and "index" in m.get("mediaType", "") or "manifest" in m.get("mediaType", "")]
+named = [m for m in imgs if tag(m) and not tag(m).startswith("sha256-")]
+print((named or imgs or ms)[0]["digest"])
+PY
+)"
+  authfile >/dev/null 2>&1
+  log "regctl image copy --referrers --digest-tags --force-recursive ocidir@$top -> $ref"
+  tool "$(tool_ref "$REGCTL_IMAGE")" --user "$ME" -v "$d:/layout" \
+    ${CA:+--mount "type=bind,src=$TMPD/certs/$REGISTRY,dst=/etc/docker/certs.d/$REGISTRY,readonly"} -- \
+    image copy --referrers --digest-tags --force-recursive "ocidir:///layout@$top" "$ref" >&2
+  echo "${ref%%@*}@$top"
+}
+
+cmd_export() {
+  local ref="${1:?ref}" dest="${2:?out.tar}"; local d="$TMPD/layout"; mkdir -p "$d"
+  local ltag="${ref%@*}"; ltag="${ltag##*/}"; case "$ltag" in *:*) ltag="${ltag##*:}";; *) ltag="latest";; esac   # layout tag = source tag
+  log "regctl image copy --referrers --digest-tags --force-recursive $ref -> OCI layout ($dest)"
+  tool "$REGCTL_IMAGE" --user "$ME" -v "$d:/layout" ${CA:+--mount "type=bind,src=$TMPD/certs/$REGISTRY,dst=/etc/docker/certs.d/$REGISTRY,readonly"} -- \
+    image copy --referrers --digest-tags --force-recursive "$ref" "ocidir:///layout/export:$ltag" >&2
+  tar -C "$d/export" -cf "$dest" . && log "wrote $dest ($(du -h "$dest" | cut -f1)) — index, attestations and signature referrers"
+  ( cd "$(dirname "$dest")" && sha256 "$(basename "$dest")" > "$(basename "$dest").sha256" )
+}
+
+TOOL_IMAGES() { echo "$COSIGN_IMAGE $GRYPE_IMAGE $SKOPEO_IMAGE $REGCTL_IMAGE"; }
+cmd_mirror_tools() {
+  local i; authfile >/dev/null 2>&1
+  for i in $(TOOL_IMAGES); do
+    log "mirror $i -> $REGISTRY/tools/$(tool_name "$i")"
+    tool "$SKOPEO_IMAGE" -- copy --all --preserve-digests --authfile /auth/config.json \
+      ${CA:+--dest-cert-dir /certs/$REGISTRY} "docker://$i" "docker://$REGISTRY/tools/$(tool_name "$i")" >&2
+  done
+}
+
+cmd_bundle_tools() {
+  local bundle="${1:?out.tar.zst}" i imgs=(); local z=(cat); command -v zstd >/dev/null 2>&1 && z=(zstd -q -T0 -3 -c)
+  # + what an inside registry host needs: the registry image itself and htpasswd (registry/add-user.sh)
+  local reg_img="$ZOT_IMAGE"; [ "${REGISTRY_IMPL:-zot}" = distribution ] && reg_img="$REGISTRY_IMAGE"
+  for i in $(TOOL_IMAGES) "$reg_img" "$HTPASSWD_IMAGE"; do docker pull -q --platform "$SERVER_PLATFORM" "$i" >/dev/null; imgs+=("$i"); done
+  log "docker save --platform $SERVER_PLATFORM ${imgs[*]} > $bundle"
+  docker save --platform "$SERVER_PLATFORM" "${imgs[@]}" | "${z[@]}" > "$bundle"
+  ( cd "$(dirname "$bundle")" && sha256 "$(basename "$bundle")" > "$(basename "$bundle").sha256" )
+  log "inside: docker load -i $(basename "$bundle")   (docker load reads zstd directly)"
+}
+
+case "$CMD" in
+  doctor) cmd_doctor "$@";; login) cmd_login "$@";; keygen) cmd_keygen "$@";; builder) cmd_builder "$@";; build) cmd_build "$@";;
+  scan) cmd_scan "$@";; sign) cmd_sign "$@";; verify) cmd_verify "$@";; release) cmd_release "$@";;
+  deploy) cmd_deploy "$@";; ship-ssh) cmd_ship_ssh "$@";; bundle) cmd_bundle "$@";; import) cmd_import "$@";;
+  export) cmd_export "$@";; mirror-tools) cmd_mirror_tools "$@";; bundle-tools) cmd_bundle_tools "$@";;
+  *) die "unknown command $CMD (img --help)";;
+esac
